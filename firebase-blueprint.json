@@ -1,0 +1,48 @@
+{
+  "entities": {
+    "UserProfile": {
+      "title": "UserProfile",
+      "description": "Developer profile with credit balance and stats",
+      "type": "object",
+      "properties": {
+        "uid": { "type": "string" },
+        "displayName": { "type": "string" },
+        "email": { "type": "string" },
+        "credits": { "type": "number" },
+        "appsSubmittedCount": { "type": "number" },
+        "appsTestedCount": { "type": "number" },
+        "dailyStreak": { "type": "number" }
+      },
+      "required": ["uid", "email"]
+    },
+    "AppListing": {
+      "title": "AppListing",
+      "description": "Android application submitted for 20 testers exchange",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "title": { "type": "string" },
+        "packageName": { "type": "string" },
+        "category": { "type": "string" },
+        "ownerId": { "type": "string" },
+        "ownerName": { "type": "string" },
+        "ownerEmail": { "type": "string" },
+        "groupUrl": { "type": "string" },
+        "storeWebUrl": { "type": "string" },
+        "requiredTesters": { "type": "number" },
+        "currentTesters": { "type": "number" }
+      },
+      "required": ["id", "title", "ownerId", "groupUrl", "storeWebUrl"]
+    }
+  },
+  "firestore": {
+    "/users/{userId}": {
+      "schema": "UserProfile",
+      "description": "User profile documents"
+    },
+    "/apps/{appId}": {
+      "schema": "AppListing",
+      "description": "App exchange testing listings"
+    }
+  }
+}

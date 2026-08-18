@@ -14,17 +14,30 @@ import {
   INITIAL_USER, 
   INITIAL_APPS, 
   INITIAL_TASKS, 
-  CREDIT_PACKAGES,
-  MOCK_LEADERBOARD,
-  INITIAL_REFERRALS
+  CREDIT_PACKAGES, 
+  MOCK_LEADERBOARD, 
+  INITIAL_REFERRALS 
 } from '../data/mockData';
 import { getFirebaseInstance } from '../firebase/config';
 import { 
   signInWithPopup, 
   signInWithEmailAndPassword, 
   createUserWithEmailAndPassword, 
-  updateProfile 
+  updateProfile,
+  signOut,
+  onAuthStateChanged
 } from 'firebase/auth';
+import {
+  collection,
+  doc,
+  setDoc,
+  getDoc,
+  updateDoc,
+  onSnapshot,
+  query,
+  where,
+  increment
+} from 'firebase/firestore';
 
 interface AppContextType {
   user: UserProfile | null;
@@ -89,7 +102,7 @@ const STORAGE_KEYS = {
 };
 
 export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-  // Load state from localStorage or initial mock data
+  // Load initial state
   const [user, setUser] = useState<UserProfile | null>(() => {
     const saved = localStorage.getItem(STORAGE_KEYS.USER);
     if (saved) {
@@ -134,7 +147,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   const [leaderboardUsers] = useState<LeaderboardUser[]>(MOCK_LEADERBOARD);
   const [referrals, setReferrals] = useState<ReferralHistoryItem[]>(INITIAL_REFERRALS);
 
-  // Sync with LocalStorage for persistent state
+  // Sync to localStorage
   useEffect(() => {
     if (user) {
       localStorage.setItem(STORAGE_KEYS.USER, JSON.stringify(user));
@@ -150,6 +163,108 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   useEffect(() => {
     localStorage.setItem(STORAGE_KEYS.TASKS, JSON.stringify(tasks));
   }, [tasks]);
+
+  // 1. REAL-TIME FIRESTORE APPS LISTENER (Syncs all uploaded apps across all devices)
+  useEffect(() => {
+    const fb = getFirebaseInstance();
+    if (!fb || !fb.db) return;
+
+    try {
+      const appsCollectionRef = collection(fb.db, 'apps');
+      const unsubscribe = onSnapshot(appsCollectionRef, (snapshot) => {
+        if (!snapshot.empty) {
+          const firestoreApps: AppListing[] = [];
+          snapshot.forEach((docSnap) => {
+            const data = docSnap.data() as AppListing;
+            firestoreApps.push({
+              ...data,
+              id: docSnap.id,
+            });
+          });
+
+          // Merge Firestore apps with mock seed apps (avoiding duplicates)
+          const firestoreIds = new Set(firestoreApps.map((a) => a.id));
+          const nonDuplicatedInitial = INITIAL_APPS.filter((a) => !firestoreIds.has(a.id));
+          setApps([...firestoreApps, ...nonDuplicatedInitial]);
+        }
+      }, (err) => {
+        console.warn('Firestore apps subscription notice:', err.message);
+      });
+
+      return () => unsubscribe();
+    } catch (err) {
+      console.warn('Could not attach Firestore apps listener:', err);
+    }
+  }, []);
+
+  // 2. REAL-TIME AUTH STATE & CLOUD PROFILE SYNC
+  useEffect(() => {
+    const fb = getFirebaseInstance();
+    if (!fb || !fb.auth) return;
+
+    const unsubscribe = onAuthStateChanged(fb.auth, async (fbUser) => {
+      if (fbUser) {
+        // User is logged in with Firebase Auth
+        let profile: UserProfile = {
+          ...INITIAL_USER,
+          uid: fbUser.uid,
+          displayName: fbUser.displayName || fbUser.email?.split('@')[0] || 'Developer',
+          email: fbUser.email || 'developer@play20.app',
+          photoURL: fbUser.photoURL || undefined,
+        };
+
+        // Try reading user profile from Firestore
+        if (fb.db) {
+          try {
+            const userDocRef = doc(fb.db, 'users', fbUser.uid);
+            const userDocSnap = await getDoc(userDocRef);
+            if (userDocSnap.exists()) {
+              const cloudData = userDocSnap.data();
+              profile = {
+                ...profile,
+                ...cloudData,
+                uid: fbUser.uid,
+              };
+            } else {
+              // First time login: create initial profile in Firestore with 100 starter coins
+              await setDoc(userDocRef, profile);
+            }
+          } catch (e) {
+            console.warn('Firestore user fetch notice:', e);
+          }
+        }
+
+        setUser(profile);
+      }
+    });
+
+    return () => unsubscribe();
+  }, []);
+
+  // 3. REAL-TIME TASKS SYNC FOR CURRENT USER
+  useEffect(() => {
+    const fb = getFirebaseInstance();
+    if (!fb || !fb.db || !user || !user.uid) return;
+
+    try {
+      const tasksQuery = query(collection(fb.db, 'tasks'), where('userId', '==', user.uid));
+      const unsubscribe = onSnapshot(tasksQuery, (snapshot) => {
+        if (!snapshot.empty) {
+          const cloudTasks: TestingTask[] = [];
+          snapshot.forEach((d) => {
+            cloudTasks.push({ ...(d.data() as TestingTask), id: d.id });
+          });
+          setTasks(cloudTasks);
+        }
+      }, (err) => {
+        console.warn('Firestore tasks subscription notice:', err.message);
+      });
+
+      return () => unsubscribe();
+    } catch (err) {
+      console.warn('Could not attach Firestore tasks listener:', err);
+    }
+  }, [user?.uid]);
 
   const addToast = (type: ToastMessage['type'], title: string, message: string) => {
     const id = 'toast_' + Date.now() + Math.random().toString(36).substring(2, 6);
@@ -176,7 +291,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     }
   };
 
-  // Google Sign-In with real Firebase or fallback
+  // Google Sign-In with real Firebase
   const signInWithGoogle = async () => {
     try {
       const fb = getFirebaseInstance();
@@ -184,13 +299,25 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         try {
           const res = await signInWithPopup(fb.auth, fb.googleProvider);
           if (res.user) {
-            const loggedUser: UserProfile = {
+            let loggedUser: UserProfile = {
               ...INITIAL_USER,
               uid: res.user.uid,
               displayName: res.user.displayName || 'Google Developer',
               email: res.user.email || 'developer@play20.app',
               photoURL: res.user.photoURL || undefined,
             };
+
+            // Sync with Firestore
+            if (fb.db) {
+              const uRef = doc(fb.db, 'users', res.user.uid);
+              const uSnap = await getDoc(uRef);
+              if (uSnap.exists()) {
+                loggedUser = { ...loggedUser, ...uSnap.data(), uid: res.user.uid };
+              } else {
+                await setDoc(uRef, loggedUser);
+              }
+            }
+
             setUser(loggedUser);
             addToast('success', 'Signed In Successfully', `Welcome, ${loggedUser.displayName}!`);
             return;
@@ -200,7 +327,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         }
       }
 
-      // Seamless login fallback
+      // Local fallback
       const loggedUser: UserProfile = {
         ...INITIAL_USER,
         displayName: 'Malamin Zaure (Google Dev)',
@@ -221,12 +348,23 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         try {
           const res = await signInWithEmailAndPassword(fb.auth, email, pass);
           if (res.user) {
-            const loggedUser: UserProfile = {
+            let loggedUser: UserProfile = {
               ...INITIAL_USER,
               uid: res.user.uid,
               displayName: res.user.displayName || email.split('@')[0],
               email: res.user.email || email,
             };
+
+            if (fb.db) {
+              const uRef = doc(fb.db, 'users', res.user.uid);
+              const uSnap = await getDoc(uRef);
+              if (uSnap.exists()) {
+                loggedUser = { ...loggedUser, ...uSnap.data(), uid: res.user.uid };
+              } else {
+                await setDoc(uRef, loggedUser);
+              }
+            }
+
             setUser(loggedUser);
             addToast('success', 'Signed In', `Welcome back, ${loggedUser.displayName}!`);
             return;
@@ -265,6 +403,11 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
               email: email,
               credits: 100, // 100 bonus starter coins
             };
+
+            if (fb.db) {
+              await setDoc(doc(fb.db, 'users', res.user.uid), loggedUser);
+            }
+
             setUser(loggedUser);
             fireConfetti();
             addToast('success', 'Account Created! 🎉', `Welcome to Play20, ${name}! +100 Coins credited.`);
@@ -291,6 +434,10 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   };
 
   const signOutUser = () => {
+    const fb = getFirebaseInstance();
+    if (fb && fb.auth) {
+      signOut(fb.auth).catch(() => {});
+    }
     setUser(null);
     addToast('info', 'Signed Out', 'You have been safely signed out.');
   };
@@ -298,7 +445,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   // Join testing task for an app
   const joinAppTest = (app: AppListing): boolean => {
     if (!user) {
-      addToast('warning', 'Sign In Required', 'Please sign in with Google to start testing apps.');
+      addToast('warning', 'Sign In Required', 'Please sign in to start testing apps.');
       return false;
     }
 
@@ -335,7 +482,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
 
     setTasks((prev) => [newTask, ...prev]);
 
-    // Update app testers count
+    // Update app testers count locally
     setApps((prev) =>
       prev.map((a) =>
         a.id === app.id ? { ...a, currentTesters: a.currentTesters + 1 } : a
@@ -347,13 +494,26 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       prev ? { ...prev, appsTestedCount: prev.appsTestedCount + 1 } : null
     );
 
+    // Write to Firestore in background
+    const fb = getFirebaseInstance();
+    if (fb && fb.db) {
+      try {
+        setDoc(doc(fb.db, 'tasks', newTask.id), newTask).catch((e) => console.warn('Firestore task write:', e));
+        updateDoc(doc(fb.db, 'apps', app.id), { currentTesters: increment(1) }).catch((e) => console.warn('Firestore app tester increment:', e));
+        if (user.uid) {
+          updateDoc(doc(fb.db, 'users', user.uid), { appsTestedCount: increment(1) }).catch((e) => console.warn('Firestore user update:', e));
+        }
+      } catch (e) {
+        console.warn('Firestore join task error:', e);
+      }
+    }
+
     addToast(
       'success',
       'Test Joined Successfully! 🎉',
       `You joined "${app.title}". Submit your Day 1 proof to earn +${app.rewardPerDay} coins!`
     );
 
-    // Prompt the proof modal immediately for easy onboarding
     setSelectedTaskForProof(newTask);
     return true;
   };
@@ -406,24 +566,18 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       creditsAwarded: earnedThisRound,
     };
 
-    // Update tasks
     const nextDay = targetTask.currentDay + (isLastDay ? 0 : 1);
-    const updatedTasks = tasks.map((t) => {
-      if (t.id === taskId) {
-        return {
-          ...t,
-          currentDay: nextDay,
-          status: (isLastDay ? 'completed' : 'active') as 'completed' | 'active',
-          lastFeedbackDate: new Date().toISOString(),
-          proofSubmittedToday: true,
-          totalCreditsEarned: t.totalCreditsEarned + earnedThisRound,
-          feedbacks: [newFeedback, ...t.feedbacks],
-        };
-      }
-      return t;
-    });
+    const updatedTask: TestingTask = {
+      ...targetTask,
+      currentDay: nextDay,
+      status: (isLastDay ? 'completed' : 'active') as 'completed' | 'active',
+      lastFeedbackDate: new Date().toISOString(),
+      proofSubmittedToday: true,
+      totalCreditsEarned: targetTask.totalCreditsEarned + earnedThisRound,
+      feedbacks: [newFeedback, ...targetTask.feedbacks],
+    };
 
-    setTasks(updatedTasks);
+    setTasks((prev) => prev.map((t) => (t.id === taskId ? updatedTask : t)));
 
     // Update user balance & streak
     setUser((prev) => {
@@ -434,6 +588,23 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         dailyStreak: prev.dailyStreak + 1,
       };
     });
+
+    // Write to Firestore in background
+    const fb = getFirebaseInstance();
+    if (fb && fb.db) {
+      try {
+        setDoc(doc(fb.db, 'tasks', taskId), updatedTask).catch((e) => console.warn('Firestore task update:', e));
+        setDoc(doc(fb.db, 'proofs', newFeedback.id), newFeedback).catch((e) => console.warn('Firestore proof write:', e));
+        if (user.uid) {
+          updateDoc(doc(fb.db, 'users', user.uid), {
+            credits: increment(earnedThisRound),
+            dailyStreak: increment(1)
+          }).catch((e) => console.warn('Firestore user credit update:', e));
+        }
+      } catch (e) {
+        console.warn('Firestore proof submit error:', e);
+      }
+    }
 
     fireConfetti();
 
@@ -450,7 +621,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     };
   };
 
-  // Add new app
+  // Add new app (Now stores in CLOUD FIRESTORE so all phones/browsers see it instantly)
   const addNewApp = (
     appData: Omit<AppListing, 'id' | 'ownerId' | 'ownerName' | 'ownerEmail' | 'currentTesters' | 'createdAt' | 'active'>
   ): boolean => {
@@ -472,7 +643,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
 
     const newApp: AppListing = {
       ...appData,
-      id: 'app_' + Date.now(),
+      id: 'app_' + Date.now() + '_' + Math.random().toString(36).substring(2, 7),
       ownerId: user.uid,
       ownerName: user.displayName,
       ownerEmail: user.email,
@@ -481,9 +652,10 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       active: true,
     };
 
+    // Update local state immediately
     setApps((prev) => [newApp, ...prev]);
 
-    // Deduct coins & increment apps submitted count
+    // Deduct coins & increment apps count
     setUser((prev) => {
       if (!prev) return null;
       return {
@@ -493,11 +665,36 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       };
     });
 
+    // Write to Firestore Cloud Database so all other phones/users receive it in real-time!
+    const fb = getFirebaseInstance();
+    if (fb && fb.db) {
+      try {
+        setDoc(doc(fb.db, 'apps', newApp.id), newApp)
+          .then(() => {
+            console.log('App published to Firestore cloud successfully:', newApp.id);
+          })
+          .catch((err) => {
+            console.warn('Firestore app write error:', err);
+          });
+
+        if (user.uid) {
+          updateDoc(doc(fb.db, 'users', user.uid), {
+            credits: increment(-creationCost),
+            appsSubmittedCount: increment(1),
+          }).catch((err) => {
+            console.warn('Firestore user update error:', err);
+          });
+        }
+      } catch (err) {
+        console.warn('Firestore app save exception:', err);
+      }
+    }
+
     fireConfetti();
     addToast(
       'success',
       'App Published to Testing Exchange! 🚀',
-      `"${newApp.title}" is now live! 20 tester slots are open. Deducted ${creationCost} Coins.`
+      `"${newApp.title}" is now live in the cloud! 20 tester slots are open. Deducted ${creationCost} Coins.`
     );
     setIsAddAppModalOpen(false);
     setActiveTab('my-apps');
@@ -516,6 +713,13 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         credits: prev.credits + pkg.credits,
       };
     });
+
+    const fb = getFirebaseInstance();
+    if (fb && fb.db && user?.uid) {
+      updateDoc(doc(fb.db, 'users', user.uid), {
+        credits: increment(pkg.credits),
+      }).catch((e) => console.warn('Firestore credit update:', e));
+    }
 
     fireConfetti();
     addToast(
@@ -548,6 +752,17 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         referralEarnings: prev.referralEarnings + 50,
       };
     });
+
+    if (user?.uid) {
+      const fb = getFirebaseInstance();
+      if (fb && fb.db) {
+        updateDoc(doc(fb.db, 'users', user.uid), {
+          credits: increment(50),
+          referralsCount: increment(1),
+          referralEarnings: increment(50),
+        }).catch((e) => console.warn('Firestore referral bonus:', e));
+      }
+    }
 
     const newRef: ReferralHistoryItem = {
       id: 'ref_' + Date.now(),

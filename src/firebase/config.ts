@@ -1,6 +1,6 @@
 import { initializeApp, getApps, getApp, FirebaseApp } from 'firebase/app';
 import { getAuth, GoogleAuthProvider, Auth } from 'firebase/auth';
-import { getFirestore, Firestore } from 'firebase/firestore';
+import { getFirestore, initializeFirestore, Firestore } from 'firebase/firestore';
 
 export interface FirebaseClientConfig {
   apiKey: string;
@@ -34,17 +34,26 @@ export function initFirebase(customConfig?: Partial<FirebaseClientConfig>) {
   };
 
   try {
-    // Only initialize if we have actual valid-looking keys or to allow fallback
     if (!getApps().length) {
       app = initializeApp(config);
     } else {
       app = getApp();
     }
     
-    auth = getAuth(app);
-    db = getFirestore(app);
-    googleProvider = new GoogleAuthProvider();
-    googleProvider.setCustomParameters({ prompt: 'select_account' });
+    try {
+      auth = getAuth(app);
+      googleProvider = new GoogleAuthProvider();
+      googleProvider.setCustomParameters({ prompt: 'select_account' });
+    } catch (e) {
+      console.warn("Auth initialization notice:", e);
+    }
+
+    try {
+      db = getFirestore(app);
+    } catch (e) {
+      console.warn("Firestore fallback notice:", e);
+    }
+
     isFirebaseLive = true;
     return { app, auth, db, googleProvider, isLive: true };
   } catch (error) {
