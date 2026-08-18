@@ -96,10 +96,19 @@ interface AppContextType {
 const AppContext = createContext<AppContextType | undefined>(undefined);
 
 const STORAGE_KEYS = {
-  USER: 'play20_user_v1',
-  APPS: 'play20_apps_v1',
-  TASKS: 'play20_tasks_v1',
+  USER: 'play20_user_v2',
+  APPS: 'play20_apps_v2',
+  TASKS: 'play20_tasks_v2',
 };
+
+// Clear legacy v1 mock cache if present
+try {
+  localStorage.removeItem('play20_user_v1');
+  localStorage.removeItem('play20_apps_v1');
+  localStorage.removeItem('play20_tasks_v1');
+} catch (e) {
+  // ignore
+}
 
 export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   // Load initial state
