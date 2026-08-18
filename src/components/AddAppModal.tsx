@@ -1,9 +1,13 @@
-import React, { useState } from 'react';
+import React, { useState, useRef } from 'react';
 import { 
   PlusCircle, 
   Coins, 
   AlertCircle, 
-  Sparkles
+  Sparkles,
+  Upload,
+  Image as ImageIcon,
+  X as CloseIcon,
+  Check
 } from 'lucide-react';
 import { useApp } from '../context/AppContext';
 
@@ -20,6 +24,9 @@ export const AddAppModal: React.FC = () => {
   const [title, setTitle] = useState('');
   const [groupUrl, setGroupUrl] = useState('');
   const [storeWebUrl, setStoreWebUrl] = useState('');
+  const [iconUrl, setIconUrl] = useState<string>('');
+  const [isUploading, setIsUploading] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   if (!isAddAppModalOpen) return null;
 
@@ -27,11 +34,72 @@ export const AddAppModal: React.FC = () => {
   const userBalance = user?.credits || 0;
   const hasSufficientCredits = userBalance >= totalCostCoins;
 
+  // Handle image upload & compression for phone / computer
+  const handleImageFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    if (!file.type.startsWith('image/')) {
+      addToast('error', 'Invalid File', 'Please select an image file (PNG, JPG, WEBP).');
+      return;
+    }
+
+    if (file.size > 5 * 1024 * 1024) {
+      addToast('error', 'File Too Large', 'Please select an image under 5MB.');
+      return;
+    }
+
+    setIsUploading(true);
+    const reader = new FileReader();
+    reader.onload = (event) => {
+      const img = new Image();
+      img.onload = () => {
+        // Resize to 192x192 max for high quality + lightweight Firestore storage
+        const canvas = document.createElement('canvas');
+        const MAX_SIZE = 192;
+        let width = img.width;
+        let height = img.height;
+
+        if (width > height) {
+          if (width > MAX_SIZE) {
+            height *= MAX_SIZE / width;
+            width = MAX_SIZE;
+          }
+        } else {
+          if (height > MAX_SIZE) {
+            width *= MAX_SIZE / height;
+            height = MAX_SIZE;
+          }
+        }
+
+        canvas.width = width;
+        canvas.height = height;
+        const ctx = canvas.getContext('2d');
+        if (ctx) {
+          ctx.drawImage(img, 0, 0, width, height);
+          const compressedDataUrl = canvas.toDataURL('image/jpeg', 0.85);
+          setIconUrl(compressedDataUrl);
+          addToast('success', 'Icon Uploaded', 'App icon loaded successfully!');
+        }
+        setIsUploading(false);
+      };
+      img.src = event.target?.result as string;
+    };
+    reader.readAsDataURL(file);
+  };
+
+  const handleRemoveIcon = () => {
+    setIconUrl('');
+    if (fileInputRef.current) {
+      fileInputRef.current.value = '';
+    }
+  };
+
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
 
     if (!title.trim() || !groupUrl.trim() || !storeWebUrl.trim()) {
-      addToast('error', 'Missing Information', 'Please fill in all 3 required fields.');
+      addToast('error', 'Missing Information', 'Please fill in all required fields.');
       return;
     }
 
@@ -46,12 +114,14 @@ export const AddAppModal: React.FC = () => {
     const pkgMatch = storeWebUrl.match(/(?:id=|testing\/)([a-zA-Z0-9._]+)/);
     const packageName = pkgMatch ? pkgMatch[1] : `com.app.${title.toLowerCase().replace(/[^a-z0-9]/g, '')}`;
 
+    const finalIcon = iconUrl || 'https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?w=120&auto=format&fit=crop&q=80';
+
     const success = addNewApp({
       title: title.trim(),
       packageName,
       category: 'Productivity',
       description: 'Android application in closed testing. 20 testers required for 14 continuous days.',
-      iconUrl: 'https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?w=120&auto=format&fit=crop&q=80',
+      iconUrl: finalIcon,
       groupUrl: groupUrl.trim(),
       storeWebUrl: storeWebUrl.trim(),
       storeAndroidUrl: storeWebUrl.trim(),
@@ -68,6 +138,7 @@ export const AddAppModal: React.FC = () => {
       setTitle('');
       setGroupUrl('');
       setStoreWebUrl('');
+      setIconUrl('');
     }
   };
 
@@ -95,9 +166,77 @@ export const AddAppModal: React.FC = () => {
           </button>
         </div>
 
-        {/* Form Body - ONLY 3 ESSENTIAL FIELDS */}
+        {/* Form Body */}
         <form onSubmit={handleSubmit} className="mt-5 space-y-4">
           
+          {/* App Icon Upload Section */}
+          <div>
+            <label className="block text-xs font-bold text-slate-800 mb-1.5">
+              App Icon (Hoton App) <span className="text-slate-400 font-normal text-[11px]">(Optional)</span>
+            </label>
+            
+            <input
+              type="file"
+              ref={fileInputRef}
+              onChange={handleImageFileChange}
+              accept="image/png,image/jpeg,image/webp"
+              className="hidden"
+            />
+
+            <div className="flex items-center gap-3.5 p-3 rounded-2xl border border-slate-200 bg-slate-50/80">
+              {/* Icon Preview */}
+              <div className="relative h-14 w-14 rounded-2xl border border-slate-200 bg-white overflow-hidden shrink-0 flex items-center justify-center shadow-xs">
+                {iconUrl ? (
+                  <img
+                    src={iconUrl}
+                    alt="App Icon Preview"
+                    className="h-full w-full object-cover"
+                  />
+                ) : (
+                  <div className="flex flex-col items-center justify-center text-slate-400">
+                    <ImageIcon className="h-6 w-6 text-slate-300" />
+                  </div>
+                )}
+              </div>
+
+              {/* Upload Action */}
+              <div className="flex-1 min-w-0">
+                {iconUrl ? (
+                  <div className="flex items-center gap-2">
+                    <button
+                      type="button"
+                      onClick={() => fileInputRef.current?.click()}
+                      className="px-3 py-1.5 rounded-xl bg-indigo-50 text-indigo-700 border border-indigo-200 text-xs font-bold hover:bg-indigo-100 transition-all active:scale-95"
+                    >
+                      Change Icon
+                    </button>
+                    <button
+                      type="button"
+                      onClick={handleRemoveIcon}
+                      className="p-1.5 rounded-xl text-rose-600 hover:bg-rose-50 border border-transparent hover:border-rose-200 text-xs font-bold transition-all"
+                      title="Remove Icon"
+                    >
+                      <CloseIcon className="h-4 w-4" />
+                    </button>
+                  </div>
+                ) : (
+                  <div>
+                    <button
+                      type="button"
+                      disabled={isUploading}
+                      onClick={() => fileInputRef.current?.click()}
+                      className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-white text-indigo-600 border border-indigo-200 text-xs font-bold hover:bg-indigo-50 shadow-xs transition-all active:scale-95"
+                    >
+                      <Upload className="h-3.5 w-3.5" />
+                      <span>{isUploading ? 'Loading...' : 'Upload from Phone/PC'}</span>
+                    </button>
+                    <p className="text-[10px] text-slate-400 mt-1 truncate">PNG, JPG ko WEBP</p>
+                  </div>
+                )}
+              </div>
+            </div>
+          </div>
+
           {/* 1. App Title */}
           <div>
             <label className="block text-xs font-bold text-slate-800 mb-1.5">
