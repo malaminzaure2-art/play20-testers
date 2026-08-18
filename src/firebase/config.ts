@@ -1,6 +1,14 @@
 import { initializeApp, getApps, getApp, FirebaseApp } from 'firebase/app';
-import { getAuth, GoogleAuthProvider, Auth } from 'firebase/auth';
-import { getFirestore, initializeFirestore, Firestore } from 'firebase/firestore';
+import { 
+  getAuth, 
+  GoogleAuthProvider, 
+  Auth, 
+  setPersistence, 
+  browserLocalPersistence, 
+  browserSessionPersistence, 
+  inMemoryPersistence 
+} from 'firebase/auth';
+import { getFirestore, Firestore } from 'firebase/firestore';
 
 export interface FirebaseClientConfig {
   apiKey: string;
@@ -42,6 +50,12 @@ export function initFirebase(customConfig?: Partial<FirebaseClientConfig>) {
     
     try {
       auth = getAuth(app);
+      // Ensure resilient persistence for mobile and private tabs
+      setPersistence(auth, browserLocalPersistence)
+        .catch(() => setPersistence(auth!, browserSessionPersistence))
+        .catch(() => setPersistence(auth!, inMemoryPersistence))
+        .catch((e) => console.warn('Auth persistence notice:', e));
+
       googleProvider = new GoogleAuthProvider();
       googleProvider.setCustomParameters({ prompt: 'select_account' });
     } catch (e) {
@@ -57,7 +71,7 @@ export function initFirebase(customConfig?: Partial<FirebaseClientConfig>) {
     isFirebaseLive = true;
     return { app, auth, db, googleProvider, isLive: true };
   } catch (error) {
-    console.warn("Running in enhanced client storage mode (Firebase fallback ready):", error);
+    console.warn("Running in enhanced client storage mode:", error);
     isFirebaseLive = false;
     return { app: null, auth: null, db: null, googleProvider: null, isLive: false };
   }
