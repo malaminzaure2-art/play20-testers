@@ -108,7 +108,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     if (saved) {
       try { return JSON.parse(saved); } catch (e) { console.error(e); }
     }
-    return INITIAL_USER;
+    return null;
   });
 
   const [apps, setApps] = useState<AppListing[]>(() => {
@@ -116,7 +116,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     if (saved) {
       try { return JSON.parse(saved); } catch (e) { console.error(e); }
     }
-    return INITIAL_APPS;
+    return [];
   });
 
   const [tasks, setTasks] = useState<TestingTask[]>(() => {
@@ -124,7 +124,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     if (saved) {
       try { return JSON.parse(saved); } catch (e) { console.error(e); }
     }
-    return INITIAL_TASKS;
+    return [];
   });
 
   const [activeTab, setActiveTab] = useState<ActiveTab>('explore');
@@ -172,21 +172,15 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     try {
       const appsCollectionRef = collection(fb.db, 'apps');
       const unsubscribe = onSnapshot(appsCollectionRef, (snapshot) => {
-        if (!snapshot.empty) {
-          const firestoreApps: AppListing[] = [];
-          snapshot.forEach((docSnap) => {
-            const data = docSnap.data() as AppListing;
-            firestoreApps.push({
-              ...data,
-              id: docSnap.id,
-            });
+        const firestoreApps: AppListing[] = [];
+        snapshot.forEach((docSnap) => {
+          const data = docSnap.data() as AppListing;
+          firestoreApps.push({
+            ...data,
+            id: docSnap.id,
           });
-
-          // Merge Firestore apps with mock seed apps (avoiding duplicates)
-          const firestoreIds = new Set(firestoreApps.map((a) => a.id));
-          const nonDuplicatedInitial = INITIAL_APPS.filter((a) => !firestoreIds.has(a.id));
-          setApps([...firestoreApps, ...nonDuplicatedInitial]);
-        }
+        });
+        setApps(firestoreApps);
       }, (err) => {
         console.warn('Firestore apps subscription notice:', err.message);
       });
