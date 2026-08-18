@@ -294,145 +294,164 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     }
   };
 
-  // Google Sign-In with real Firebase
+  const createDefaultUserProfile = (uid: string, displayName: string, email: string, photoURL?: string): UserProfile => ({
+    uid,
+    email,
+    displayName: displayName || 'Android Developer',
+    photoURL,
+    credits: 100, // 100 starter coins
+    joinedAt: new Date().toISOString(),
+    role: 'developer',
+    appsSubmittedCount: 0,
+    appsTestedCount: 0,
+    dailyStreak: 1,
+    referralCode: (displayName.replace(/[^a-zA-Z0-9]/g, '').slice(0, 4) || 'DEV') + Math.floor(1000 + Math.random() * 9000),
+    referralsCount: 0,
+    referralEarnings: 0,
+    testerRank: 'Bronze',
+    completedFullTests: 0,
+  });
+
+  // Google Sign-In with real Firebase Auth
   const signInWithGoogle = async () => {
+    const fb = getFirebaseInstance();
+    if (!fb || !fb.auth || !fb.googleProvider) {
+      throw new Error('Firebase Authentication is not ready. Please try Email login or check connection.');
+    }
+    
     try {
-      const fb = getFirebaseInstance();
-      if (fb && fb.auth && fb.googleProvider && fb.isLive) {
-        try {
-          const res = await signInWithPopup(fb.auth, fb.googleProvider);
-          if (res.user) {
-            let loggedUser: UserProfile = {
-              ...INITIAL_USER,
-              uid: res.user.uid,
-              displayName: res.user.displayName || 'Google Developer',
-              email: res.user.email || 'developer@play20.app',
-              photoURL: res.user.photoURL || undefined,
-            };
+      const res = await signInWithPopup(fb.auth, fb.googleProvider);
+      if (res.user) {
+        let loggedUser = createDefaultUserProfile(
+          res.user.uid,
+          res.user.displayName || res.user.email?.split('@')[0] || 'Google Developer',
+          res.user.email || 'developer@play20.app',
+          res.user.photoURL || undefined
+        );
 
-            // Sync with Firestore
-            if (fb.db) {
-              const uRef = doc(fb.db, 'users', res.user.uid);
-              const uSnap = await getDoc(uRef);
-              if (uSnap.exists()) {
-                loggedUser = { ...loggedUser, ...uSnap.data(), uid: res.user.uid };
-              } else {
-                await setDoc(uRef, loggedUser);
-              }
+        // Sync with Firestore
+        if (fb.db) {
+          try {
+            const uRef = doc(fb.db, 'users', res.user.uid);
+            const uSnap = await getDoc(uRef);
+            if (uSnap.exists()) {
+              loggedUser = { ...loggedUser, ...uSnap.data(), uid: res.user.uid };
+            } else {
+              await setDoc(uRef, loggedUser);
             }
-
-            setUser(loggedUser);
-            addToast('success', 'Signed In Successfully', `Welcome, ${loggedUser.displayName}!`);
-            return;
+          } catch (dbErr) {
+            console.warn('Firestore user doc sync notice:', dbErr);
           }
-        } catch (popupErr: any) {
-          console.warn('Firebase popup notice:', popupErr);
         }
-      }
 
-      // Local fallback
-      const loggedUser: UserProfile = {
-        ...INITIAL_USER,
-        displayName: 'Malamin Zaure (Google Dev)',
-        email: 'malaminzaure2@gmail.com',
-      };
-      setUser(loggedUser);
-      addToast('success', 'Signed In Successfully', `Welcome back, ${loggedUser.displayName}!`);
-    } catch (error: any) {
-      addToast('error', 'Sign-in Failed', error.message || 'Could not complete Google auth');
+        setUser(loggedUser);
+        addToast('success', 'Signed In Successfully', `Welcome, ${loggedUser.displayName}!`);
+      }
+    } catch (popupErr: any) {
+      console.error('Firebase Google popup error:', popupErr);
+      if (popupErr.code === 'auth/unauthorized-domain') {
+        throw new Error('This domain (play20-testers.vercel.app) needs to be added to Authorized Domains in Firebase Console.');
+      } else if (popupErr.code === 'auth/popup-closed-by-user') {
+        throw new Error('Sign-in popup was closed before completing. Please try again.');
+      } else if (popupErr.code === 'auth/popup-blocked') {
+        throw new Error('Popup was blocked by your browser. Please allow popups or use Email sign in.');
+      } else {
+        throw new Error(popupErr.message || 'Could not complete Google sign-in.');
+      }
     }
   };
 
   // Email & Password Sign-In
   const signInWithEmail = async (email: string, pass: string) => {
+    const fb = getFirebaseInstance();
+    if (!fb || !fb.auth) {
+      throw new Error('Firebase Authentication is not available.');
+    }
+
     try {
-      const fb = getFirebaseInstance();
-      if (fb && fb.auth && fb.isLive) {
-        try {
-          const res = await signInWithEmailAndPassword(fb.auth, email, pass);
-          if (res.user) {
-            let loggedUser: UserProfile = {
-              ...INITIAL_USER,
-              uid: res.user.uid,
-              displayName: res.user.displayName || email.split('@')[0],
-              email: res.user.email || email,
-            };
+      const res = await signInWithEmailAndPassword(fb.auth, email.trim(), pass);
+      if (res.user) {
+        let loggedUser = createDefaultUserProfile(
+          res.user.uid,
+          res.user.displayName || email.split('@')[0],
+          res.user.email || email,
+          res.user.photoURL || undefined
+        );
 
-            if (fb.db) {
-              const uRef = doc(fb.db, 'users', res.user.uid);
-              const uSnap = await getDoc(uRef);
-              if (uSnap.exists()) {
-                loggedUser = { ...loggedUser, ...uSnap.data(), uid: res.user.uid };
-              } else {
-                await setDoc(uRef, loggedUser);
-              }
+        if (fb.db) {
+          try {
+            const uRef = doc(fb.db, 'users', res.user.uid);
+            const uSnap = await getDoc(uRef);
+            if (uSnap.exists()) {
+              loggedUser = { ...loggedUser, ...uSnap.data(), uid: res.user.uid };
+            } else {
+              await setDoc(uRef, loggedUser);
             }
-
-            setUser(loggedUser);
-            addToast('success', 'Signed In', `Welcome back, ${loggedUser.displayName}!`);
-            return;
+          } catch (dbErr) {
+            console.warn('Firestore user doc sync notice:', dbErr);
           }
-        } catch (authErr: any) {
-          console.warn('Firebase email signin notice:', authErr);
         }
-      }
 
-      const loggedUser: UserProfile = {
-        ...INITIAL_USER,
-        uid: 'user_' + Date.now(),
-        displayName: email.split('@')[0],
-        email: email,
-      };
-      setUser(loggedUser);
-      addToast('success', 'Signed In', `Welcome back, ${loggedUser.displayName}!`);
-    } catch (error: any) {
-      throw error;
+        setUser(loggedUser);
+        addToast('success', 'Signed In', `Welcome back, ${loggedUser.displayName}!`);
+      }
+    } catch (authErr: any) {
+      console.error('Firebase email signin error:', authErr);
+      if (authErr.code === 'auth/invalid-credential' || authErr.code === 'auth/user-not-found' || authErr.code === 'auth/wrong-password') {
+        throw new Error('Invalid email or password. If you are new, click "Create Account".');
+      } else if (authErr.code === 'auth/invalid-email') {
+        throw new Error('Please enter a valid email address.');
+      } else {
+        throw new Error(authErr.message || 'Sign in failed. Please try again.');
+      }
     }
   };
 
   // Email & Password Registration
   const signUpWithEmail = async (email: string, pass: string, name: string) => {
+    const fb = getFirebaseInstance();
+    if (!fb || !fb.auth) {
+      throw new Error('Firebase Authentication is not available.');
+    }
+
     try {
-      const fb = getFirebaseInstance();
-      if (fb && fb.auth && fb.isLive) {
+      const res = await createUserWithEmailAndPassword(fb.auth, email.trim(), pass);
+      if (res.user) {
         try {
-          const res = await createUserWithEmailAndPassword(fb.auth, email, pass);
-          if (res.user) {
-            await updateProfile(res.user, { displayName: name });
-            const loggedUser: UserProfile = {
-              ...INITIAL_USER,
-              uid: res.user.uid,
-              displayName: name,
-              email: email,
-              credits: 100, // 100 bonus starter coins
-            };
-
-            if (fb.db) {
-              await setDoc(doc(fb.db, 'users', res.user.uid), loggedUser);
-            }
-
-            setUser(loggedUser);
-            fireConfetti();
-            addToast('success', 'Account Created! 🎉', `Welcome to Play20, ${name}! +100 Coins credited.`);
-            return;
-          }
-        } catch (signupErr: any) {
-          console.warn('Firebase signup notice:', signupErr);
+          await updateProfile(res.user, { displayName: name.trim() });
+        } catch (e) {
+          console.warn('Profile update notice:', e);
         }
-      }
 
-      const loggedUser: UserProfile = {
-        ...INITIAL_USER,
-        uid: 'user_' + Date.now(),
-        displayName: name,
-        email: email,
-        credits: 100,
-      };
-      setUser(loggedUser);
-      fireConfetti();
-      addToast('success', 'Account Created! 🎉', `Welcome to Play20, ${name}! +100 Coins credited.`);
-    } catch (error: any) {
-      throw error;
+        const loggedUser = createDefaultUserProfile(
+          res.user.uid,
+          name.trim(),
+          email.trim()
+        );
+
+        if (fb.db) {
+          try {
+            await setDoc(doc(fb.db, 'users', res.user.uid), loggedUser);
+          } catch (dbErr) {
+            console.warn('Firestore user create notice:', dbErr);
+          }
+        }
+
+        setUser(loggedUser);
+        fireConfetti();
+        addToast('success', 'Account Created! 🎉', `Welcome to Play20, ${name.trim()}! +100 Starter Coins added.`);
+      }
+    } catch (signupErr: any) {
+      console.error('Firebase email signup error:', signupErr);
+      if (signupErr.code === 'auth/email-already-in-use') {
+        throw new Error('This email is already registered. Please click "Sign In" instead.');
+      } else if (signupErr.code === 'auth/weak-password') {
+        throw new Error('Password must be at least 6 characters.');
+      } else if (signupErr.code === 'auth/invalid-email') {
+        throw new Error('Please enter a valid email address.');
+      } else {
+        throw new Error(signupErr.message || 'Account registration failed. Please try again.');
+      }
     }
   };
 
@@ -735,7 +754,8 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   // Referral Copy Link
   const copyReferralLink = () => {
     const code = user?.referralCode || 'PLAY20-MZ88';
-    const link = `https://play20.app/join?ref=${code}`;
+    const baseUrl = typeof window !== 'undefined' ? window.location.origin : 'https://play20-testers.vercel.app';
+    const link = `${baseUrl}?ref=${code}`;
     navigator.clipboard.writeText(link).catch(() => {});
     addToast(
       'success',
