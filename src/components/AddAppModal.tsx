@@ -39,7 +39,7 @@ export const AddAppModal: React.FC = () => {
 
   if (!isAddAppModalOpen) return null;
 
-  const totalCostCoins = 200; // 20 testers × 10 coins
+  const totalCostCoins = 100; // Flat 100 Coins for a 20-tester closed test
   const userBalance = user?.credits || 0;
   const hasSufficientCredits = userBalance >= totalCostCoins;
 
@@ -333,7 +333,7 @@ export const AddAppModal: React.FC = () => {
               <div>
                 <span className="text-slate-500 font-medium">Campaign Cost (20 Testers):</span>
                 <div className="text-sm font-bold text-indigo-700 mt-0.5">
-                  200 Coins
+                  100 Coins
                 </div>
               </div>
 

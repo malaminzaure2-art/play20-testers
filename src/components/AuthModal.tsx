@@ -139,6 +139,17 @@ export const AuthModal: React.FC = () => {
           </button>
         </div>
 
+        {/* Welcome Bonus Notice for New Developers */}
+        {mode === 'signup' && (
+          <div className="mb-4 flex items-center gap-2.5 rounded-2xl border border-amber-200 bg-amber-50/80 p-3 text-xs text-amber-900 animate-in fade-in">
+            <span className="text-base shrink-0">🎁</span>
+            <div>
+              <strong className="block font-bold text-amber-950">110 Free Starter Coins Included!</strong>
+              <span className="text-[11px] text-amber-800">Receive 110 coins instantly upon registration to launch your 20-tester closed test immediately.</span>
+            </div>
+          </div>
+        )}
+
         {/* Error Alert */}
         {errorMsg && (
           <div className="mb-4 flex items-center gap-2 rounded-xl border border-rose-200 bg-rose-50 p-3 text-xs text-rose-700 animate-in fade-in">

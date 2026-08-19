@@ -229,7 +229,8 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
                 uid: fbUser.uid,
               };
             } else {
-              // First time login: create initial profile in Firestore with 100 starter coins
+              // First time login: create initial profile in Firestore with 110 starter coins
+              profile.credits = 110;
               await setDoc(userDocRef, profile);
             }
           } catch (e) {
@@ -339,7 +340,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     email,
     displayName: displayName || 'Android Developer',
     photoURL,
-    credits: 100, // 100 starter coins
+    credits: 110, // 110 starter coins (enough to launch first 20-tester app immediately + 10 bonus)
     joinedAt: new Date().toISOString(),
     role: 'developer',
     appsSubmittedCount: 0,
@@ -693,12 +694,12 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       return false;
     }
 
-    const creationCost = (appData.requiredTesters || 20) * (appData.rewardPerDay || 10);
+    const creationCost = 100; // Flat 100 Coins for a full 20-tester closed testing pool
     if (user.credits < creationCost) {
       addToast(
         'error',
         'Insufficient Credits',
-        `You need ${creationCost} Coins to hire 20 testers for 14 days (Current balance: ${user.credits} Coins). Please buy credits or test peer apps!`
+        `You need ${creationCost} Coins to launch your 20-tester closed test (Current balance: ${user.credits} Coins). Please buy credits or test peer apps!`
       );
       setActiveTab('store');
       return false;
