@@ -150,9 +150,9 @@ export const BuyCreditsTab: React.FC = () => {
       
       {/* Header */}
       <div className="text-center max-w-3xl mx-auto pb-10">
-        <div className="inline-flex items-center gap-1.5 rounded-full bg-indigo-50 border border-indigo-200 px-3.5 py-1 text-xs font-bold text-indigo-700 mb-3 shadow-xs">
-          <Coins className="h-3.5 w-3.5" />
-          <span>Developer Credit Store</span>
+        <div className="inline-flex items-center gap-1.5 rounded-full bg-emerald-50 border border-emerald-200 px-3.5 py-1 text-xs font-bold text-emerald-800 mb-3 shadow-xs">
+          <Sparkles className="h-3.5 w-3.5 text-emerald-600" />
+          <span>🎉 Launch Promotion • 60% OFF All Packages</span>
         </div>
         <h2 className="text-2xl sm:text-4xl font-extrabold text-slate-900">
           Launch Your Closed Test Instantly

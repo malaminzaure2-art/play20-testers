@@ -39,6 +39,24 @@ export const TaskModal: React.FC = () => {
 
   const isDayOne = task?.currentDay === 1;
 
+  const handleOpenGroup = (e: React.MouseEvent) => {
+    e.preventDefault();
+    const url = task?.app.groupUrl && task.app.groupUrl.startsWith('http') 
+      ? task.app.groupUrl 
+      : 'https://groups.google.com/g/play20-testers';
+    window.open(url, '_blank', 'noopener,noreferrer');
+    setVisitedGroup(true);
+    addToast('info', 'Google Group Opened', 'Please click "Join group" on Google Groups page.');
+  };
+
+  const handleOpenStore = (e: React.MouseEvent) => {
+    e.preventDefault();
+    const url = task?.app.storeAndroidUrl || task?.app.storeWebUrl || (task?.app.packageName ? `https://play.google.com/store/apps/details?id=${task.app.packageName}` : 'https://play.google.com');
+    window.open(url, '_blank', 'noopener,noreferrer');
+    setVisitedStore(true);
+    addToast('info', 'Play Store Opened', 'Please install or open the app on your device.');
+  };
+
   // Reset states whenever modal opens for a task
   useEffect(() => {
     if (task) {
@@ -69,7 +87,8 @@ export const TaskModal: React.FC = () => {
   const minFeedbackLength = 25;
   const isFeedbackValid = feedbackText.trim().length >= minFeedbackLength;
   const isTimerDone = secondsRemaining === 0;
-  const canSubmit = isTimerDone && isFeedbackValid && visitedGroup && visitedStore && !isSubmitting;
+  const hasScreenshot = !!screenshotPreview;
+  const canSubmit = isTimerDone && isFeedbackValid && visitedGroup && visitedStore && hasScreenshot && !isSubmitting;
 
   const handleScreenshotChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -111,12 +130,17 @@ export const TaskModal: React.FC = () => {
       return;
     }
 
+    if (!hasScreenshot) {
+      addToast('error', 'Screenshot Proof Required', 'Please take and upload a screenshot of the app running on your device.');
+      return;
+    }
+
     setIsSubmitting(true);
 
     const result = submitDailyProof(
       task.id,
       feedbackText.trim(),
-      screenshotPreview || 'https://images.unsplash.com/photo-1551650975-87deedd944c3?w=500&auto=format&fit=crop&q=80',
+      screenshotPreview || '',
       rating,
       'Android Device',
       'Android 14'
@@ -218,37 +242,33 @@ export const TaskModal: React.FC = () => {
                 Step 1 & 2: Complete Google Play Opt-In (Day 1 Only)
               </span>
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
-                <a
-                  href={task.app.groupUrl}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  onClick={() => setVisitedGroup(true)}
+                <button
+                  type="button"
+                  onClick={handleOpenGroup}
                   className={`flex items-center justify-center gap-2 rounded-xl py-2.5 px-3 text-xs font-bold transition-all border ${
                     visitedGroup 
                       ? 'bg-emerald-50 text-emerald-800 border-emerald-300 shadow-xs' 
-                      : 'bg-slate-50 hover:bg-slate-100 text-slate-800 border-slate-200'
+                      : 'bg-indigo-50 hover:bg-indigo-100 text-indigo-900 border-indigo-200 active:scale-95'
                   }`}
                 >
                   <Users className={`h-4 w-4 ${visitedGroup ? 'text-emerald-600' : 'text-indigo-600'}`} />
                   <span>{visitedGroup ? '✓ 1. Group Joined' : '1. Join Google Group'}</span>
                   <ExternalLink className="h-3 w-3 opacity-60" />
-                </a>
+                </button>
 
-                <a
-                  href={task.app.storeAndroidUrl || task.app.storeWebUrl}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  onClick={() => setVisitedStore(true)}
+                <button
+                  type="button"
+                  onClick={handleOpenStore}
                   className={`flex items-center justify-center gap-2 rounded-xl py-2.5 px-3 text-xs font-bold transition-all border ${
                     visitedStore 
                       ? 'bg-emerald-50 text-emerald-800 border-emerald-300 shadow-xs' 
-                      : 'bg-indigo-50 hover:bg-indigo-100 text-indigo-800 border-indigo-200'
+                      : 'bg-indigo-600 hover:bg-indigo-700 text-white border-transparent shadow-xs active:scale-95'
                   }`}
                 >
-                  <Play className={`h-4 w-4 ${visitedStore ? 'text-emerald-600 fill-emerald-600' : 'text-indigo-600 fill-indigo-600'}`} />
+                  <Play className={`h-4 w-4 ${visitedStore ? 'text-emerald-600 fill-emerald-600' : 'text-white fill-white'}`} />
                   <span>{visitedStore ? '✓ 2. Play Store Opened' : '2. Open Play Store'}</span>
                   <ExternalLink className="h-3 w-3 opacity-60" />
-                </a>
+                </button>
               </div>
             </div>
           ) : (
@@ -257,15 +277,14 @@ export const TaskModal: React.FC = () => {
                 <CheckCircle2 className="h-4 w-4 text-emerald-600 shrink-0" />
                 <span>Google Group Opt-In Active (Day 1 Verified)</span>
               </div>
-              <a
-                href={task.app.storeAndroidUrl || task.app.storeWebUrl}
-                target="_blank"
-                rel="noopener noreferrer"
+              <button
+                type="button"
+                onClick={handleOpenStore}
                 className="text-[11px] font-bold text-indigo-600 hover:text-indigo-700 underline flex items-center gap-1"
               >
                 <span>Launch App</span>
                 <ExternalLink className="h-3 w-3" />
-              </a>
+              </button>
             </div>
           )}
 
@@ -337,11 +356,12 @@ export const TaskModal: React.FC = () => {
             </div>
           </div>
 
-          {/* Screenshot Proof Upload (Optional) */}
+          {/* Screenshot Proof Upload (Mandatory) */}
           <div>
             <div className="flex items-center justify-between mb-1">
-              <label className="text-[11px] font-bold text-slate-700">
-                Screenshot Proof (Optional)
+              <label className="text-[11px] font-bold text-slate-800 flex items-center gap-1">
+                <span>Screenshot Proof from Phone</span>
+                <span className="text-rose-500 font-bold">* (MANDATORY)</span>
               </label>
               {screenshotPreview && (
                 <button
@@ -363,25 +383,30 @@ export const TaskModal: React.FC = () => {
             />
 
             {screenshotPreview ? (
-              <div className="relative rounded-2xl border border-slate-200 overflow-hidden bg-slate-50 p-2 flex items-center gap-3">
+              <div className="relative rounded-2xl border border-emerald-200 overflow-hidden bg-emerald-50/50 p-2.5 flex items-center gap-3">
                 <img
                   src={screenshotPreview}
                   alt="Proof preview"
-                  className="h-12 w-12 rounded-lg object-cover ring-1 ring-slate-200"
+                  className="h-14 w-14 rounded-xl object-cover ring-2 ring-emerald-500 shrink-0"
                 />
                 <div className="text-xs">
-                  <span className="font-bold text-slate-800 block">Screenshot Attached</span>
-                  <span className="text-[10px] text-slate-500">Ready to submit with daily feedback</span>
+                  <span className="font-bold text-emerald-950 flex items-center gap-1">
+                    <CheckCircle2 className="h-3.5 w-3.5 text-emerald-600" />
+                    Screenshot Proof Attached
+                  </span>
+                  <span className="text-[10px] text-emerald-700 block mt-0.5">
+                    Verified real device testing proof.
+                  </span>
                 </div>
               </div>
             ) : (
               <button
                 type="button"
                 onClick={() => fileInputRef.current?.click()}
-                className="w-full rounded-xl border border-dashed border-slate-300 hover:border-indigo-400 bg-slate-50 hover:bg-indigo-50/50 p-3 text-center transition-colors flex items-center justify-center gap-2 text-xs font-semibold text-slate-600"
+                className="w-full rounded-xl border-2 border-dashed border-indigo-200 hover:border-indigo-500 bg-indigo-50/30 hover:bg-indigo-50/70 p-3.5 text-center transition-all flex items-center justify-center gap-2 text-xs font-bold text-indigo-700 active:scale-98"
               >
                 <Upload className="h-4 w-4 text-indigo-600" />
-                <span>Upload Screenshot from Phone / Gallery</span>
+                <span>Upload Screenshot of App Running on Phone *</span>
               </button>
             )}
           </div>
@@ -389,18 +414,20 @@ export const TaskModal: React.FC = () => {
           {/* Action Buttons */}
           <div className="pt-2">
             {!canSubmit && (
-              <div className="mb-2.5 p-2 rounded-xl bg-slate-50 border border-slate-200 text-[11px] text-slate-600 flex items-center gap-2">
-                <AlertCircle className="h-3.5 w-3.5 text-indigo-600 shrink-0" />
-                <span>
+              <div className="mb-2.5 p-2.5 rounded-xl bg-slate-50 border border-slate-200 text-[11px] text-slate-700 flex items-center gap-2">
+                <AlertCircle className="h-4 w-4 text-indigo-600 shrink-0" />
+                <span className="font-medium">
                   {!visitedGroup 
                     ? 'Click "1. Join Google Group" to start' 
                     : !visitedStore 
                     ? 'Click "2. Open Play Store" to install' 
                     : !isTimerDone 
-                    ? `Testing verification active (${secondsRemaining}s remaining)` 
+                    ? `Active testing timer (${secondsRemaining}s remaining)` 
                     : !isFeedbackValid 
                     ? `Write at least ${minFeedbackLength - feedbackText.trim().length} more characters of feedback` 
-                    : 'Ready to submit proof!'}
+                    : !hasScreenshot
+                    ? 'Upload a screenshot of the app running on your phone'
+                    : 'Ready to claim coins!'}
                 </span>
               </div>
             )}

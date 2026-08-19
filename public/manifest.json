@@ -1,0 +1,18 @@
+{
+  "name": "Play20 Testers",
+  "short_name": "Play20",
+  "description": "Google Play 20-Testers 14-Day Closed Testing Platform",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#0f172a",
+  "theme_color": "#4f46e5",
+  "orientation": "portrait-primary",
+  "icons": [
+    {
+      "src": "/pwa-icon.svg",
+      "sizes": "192x192 512x512",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ]
+}

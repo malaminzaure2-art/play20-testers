@@ -18,7 +18,9 @@ import {
   PlusCircle,
   FileText,
   Info,
-  Mail
+  Mail,
+  Smartphone,
+  Download
 } from 'lucide-react';
 import { useApp } from '../context/AppContext';
 
@@ -289,6 +291,23 @@ export const SidebarDrawer: React.FC = () => {
                   <span className="rounded bg-indigo-600 text-white text-[10px] font-bold px-1.5 py-0.2">
                     +50 Coins
                   </span>
+                </button>
+
+                <button
+                  onClick={() => {
+                    setIsSidebarOpen(false);
+                    const installBtn = document.getElementById('btn-install-pwa');
+                    if (installBtn) {
+                      installBtn.click();
+                    }
+                  }}
+                  className="w-full flex items-center justify-between px-3 py-2.5 rounded-xl text-xs font-semibold text-indigo-700 bg-indigo-50/60 hover:bg-indigo-50 transition-all border border-indigo-100/80"
+                >
+                  <div className="flex items-center gap-2.5">
+                    <Smartphone className="h-4 w-4 text-indigo-600" />
+                    <span className="font-bold">Install to Device</span>
+                  </div>
+                  <Download className="h-3.5 w-3.5 text-indigo-500" />
                 </button>
               </div>
             </div>

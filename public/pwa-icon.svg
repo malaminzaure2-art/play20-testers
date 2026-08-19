@@ -1,0 +1,18 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="512" height="512">
+  <defs>
+    <linearGradient id="bgGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#4f46e5" />
+      <stop offset="100%" stop-color="#3730a3" />
+    </linearGradient>
+    <filter id="glow" x="-20%" y="-20%" width="140%" height="140%">
+      <feDropShadow dx="0" dy="8" stdDeviation="16" flood-color="#000" flood-opacity="0.3"/>
+    </filter>
+  </defs>
+  <rect width="512" height="512" rx="128" fill="url(#bgGrad)" />
+  <circle cx="256" cy="256" r="180" fill="white" fill-opacity="0.1" />
+  <!-- Play Triangle Icon -->
+  <path d="M210 160 L360 256 L210 352 Z" fill="#ffffff" filter="url(#glow)" />
+  <!-- Small Star Badge -->
+  <circle cx="360" cy="180" r="28" fill="#10b981" />
+  <path d="M360 166 L364 176 L375 177 L367 184 L369 194 L360 188 L351 194 L353 184 L345 177 L356 176 Z" fill="#ffffff" />
+</svg>
