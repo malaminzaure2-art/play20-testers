@@ -18,7 +18,7 @@ import {
   UploadCloud,
   Smartphone
 } from 'lucide-react';
-import { useApp } from '../context/AppContext';
+import { useApp, isTaskProofSubmittedToday } from '../context/AppContext';
 import { TestingTask } from '../types';
 
 export const MyTasksTab: React.FC = () => {
@@ -217,13 +217,23 @@ export const MyTasksTab: React.FC = () => {
                     </a>
 
                     {!isCompleted && (
-                      <button
-                        onClick={() => setSelectedTaskForProof(task)}
-                        className="flex items-center gap-1.5 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white px-4 py-2 text-xs font-bold shadow-sm shadow-indigo-200 transition-all active:scale-95"
-                      >
-                        <UploadCloud className="h-4 w-4" />
-                        <span>Submit Day {task.currentDay} Proof</span>
-                      </button>
+                      isTaskProofSubmittedToday(task) ? (
+                        <button
+                          onClick={() => setSelectedTaskForProof(task)}
+                          className="flex items-center gap-1.5 rounded-xl bg-emerald-50 hover:bg-emerald-100 border border-emerald-200 text-emerald-800 px-3.5 py-2 text-xs font-bold transition-all shadow-xs"
+                        >
+                          <CheckCircle2 className="h-4 w-4 text-emerald-600" />
+                          <span>✓ Today Done (Next: Day {task.currentDay})</span>
+                        </button>
+                      ) : (
+                        <button
+                          onClick={() => setSelectedTaskForProof(task)}
+                          className="flex items-center gap-1.5 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white px-4 py-2 text-xs font-bold shadow-sm shadow-indigo-200 transition-all active:scale-95"
+                        >
+                          <UploadCloud className="h-4 w-4" />
+                          <span>Submit Day {task.currentDay} Proof</span>
+                        </button>
+                      )
                     )}
                   </div>
                 </div>

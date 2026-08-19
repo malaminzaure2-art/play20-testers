@@ -3,9 +3,10 @@ import {
   Search, 
   Coins, 
   Users, 
-  CheckCircle2
+  CheckCircle2,
+  CalendarCheck
 } from 'lucide-react';
-import { useApp } from '../context/AppContext';
+import { useApp, isTaskProofSubmittedToday } from '../context/AppContext';
 
 export const ExploreAppsTab: React.FC = () => {
   const { 
@@ -133,13 +134,28 @@ export const ExploreAppsTab: React.FC = () => {
                       Your App
                     </div>
                   ) : existingTask ? (
-                    <button
-                      onClick={() => setSelectedTaskForProof(existingTask)}
-                      className="w-full flex items-center justify-center gap-1.5 rounded-xl bg-indigo-50 border border-indigo-200 hover:bg-indigo-100 text-indigo-700 py-2 text-xs font-bold transition-all shadow-xs"
-                    >
-                      <CheckCircle2 className="h-3.5 w-3.5 text-indigo-600" />
-                      <span>Testing Active (Day {existingTask.currentDay}/14)</span>
-                    </button>
+                    existingTask.status === 'completed' ? (
+                      <div className="w-full flex items-center justify-center gap-1.5 rounded-xl bg-emerald-50 border border-emerald-200 text-emerald-800 py-2 text-xs font-bold shadow-xs">
+                        <CheckCircle2 className="h-3.5 w-3.5 text-emerald-600" />
+                        <span>✓ 14-Day Test Completed</span>
+                      </div>
+                    ) : isTaskProofSubmittedToday(existingTask) ? (
+                      <button
+                        onClick={() => setSelectedTaskForProof(existingTask)}
+                        className="w-full flex items-center justify-center gap-1.5 rounded-xl bg-emerald-50 border border-emerald-200 hover:bg-emerald-100 text-emerald-800 py-2 text-xs font-bold transition-all shadow-xs"
+                      >
+                        <CheckCircle2 className="h-3.5 w-3.5 text-emerald-600" />
+                        <span>✓ Today Done (Day {Math.max(1, existingTask.currentDay - 1)}/14)</span>
+                      </button>
+                    ) : (
+                      <button
+                        onClick={() => setSelectedTaskForProof(existingTask)}
+                        className="w-full flex items-center justify-center gap-1.5 rounded-xl bg-indigo-50 border border-indigo-200 hover:bg-indigo-100 text-indigo-700 py-2 text-xs font-bold transition-all shadow-xs"
+                      >
+                        <CheckCircle2 className="h-3.5 w-3.5 text-indigo-600" />
+                        <span>Submit Day {existingTask.currentDay} Proof</span>
+                      </button>
+                    )
                   ) : (
                     <button
                       onClick={() => joinAppTest(app)}

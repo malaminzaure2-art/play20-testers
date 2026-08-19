@@ -11,9 +11,10 @@ import {
   Upload,
   AlertCircle,
   Smartphone,
-  ShieldCheck
+  ShieldCheck,
+  CalendarCheck
 } from 'lucide-react';
-import { useApp } from '../context/AppContext';
+import { useApp, isTaskProofSubmittedToday } from '../context/AppContext';
 
 export const TaskModal: React.FC = () => {
   const { 
@@ -25,6 +26,8 @@ export const TaskModal: React.FC = () => {
 
   const task = selectedTaskForProof;
 
+  const alreadySubmittedToday = isTaskProofSubmittedToday(task);
+
   const [feedbackText, setFeedbackText] = useState<string>('');
   const [rating, setRating] = useState<number>(5);
   const [isSubmitting, setIsSubmitting] = useState<boolean>(false);
@@ -34,17 +37,20 @@ export const TaskModal: React.FC = () => {
   const [screenshotPreview, setScreenshotPreview] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
+  const isDayOne = task?.currentDay === 1;
+
   // Reset states whenever modal opens for a task
   useEffect(() => {
     if (task) {
       setFeedbackText('');
       setRating(5);
-      setVisitedGroup(false);
-      setVisitedStore(false);
+      // On Day 2-14, Google Group & Play Store are already opted-in from Day 1
+      setVisitedGroup(!isDayOne);
+      setVisitedStore(!isDayOne);
       setSecondsRemaining(15);
       setScreenshotPreview(null);
     }
-  }, [task?.id]);
+  }, [task?.id, isDayOne]);
 
   // 15-second countdown timer for authentic testing verification
   useEffect(() => {
@@ -159,48 +165,109 @@ export const TaskModal: React.FC = () => {
           </button>
         </div>
 
-        {/* Verification Steps Form */}
-        <form onSubmit={handleSubmitProof} className="mt-4 space-y-4">
+        {/* Already Submitted Today View */}
+        {alreadySubmittedToday ? (
+          <div className="mt-6 space-y-4 text-center">
+            <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-3xl bg-emerald-50 border border-emerald-200 text-emerald-600 shadow-xs animate-in zoom-in-90">
+              <CheckCircle2 className="h-9 w-9" />
+            </div>
+
+            <div>
+              <span className="text-[10px] font-bold uppercase tracking-wider text-emerald-700 bg-emerald-100/60 px-2.5 py-0.5 rounded-full">
+                Today's Testing Done ✓
+              </span>
+              <h4 className="text-base font-bold text-slate-900 mt-2">
+                You've completed today's testing!
+              </h4>
+              <p className="text-xs text-slate-600 mt-1 max-w-sm mx-auto leading-relaxed">
+                You have already submitted your daily feedback and claimed your <strong>+{task.app.rewardPerDay} coins</strong> today.
+              </p>
+            </div>
+
+            <div className="rounded-2xl border border-slate-200 bg-slate-50 p-3.5 text-xs text-slate-700 flex items-center justify-between">
+              <div className="flex items-center gap-2 text-left">
+                <CalendarCheck className="h-4 w-4 text-indigo-600 shrink-0" />
+                <div>
+                  <span className="font-bold block">14-Day Google Play Policy</span>
+                  <span className="text-[11px] text-slate-500">Day {task.currentDay} testing session unlocks tomorrow.</span>
+                </div>
+              </div>
+              <span className="text-xs font-mono font-bold text-indigo-600 bg-white px-2 py-1 rounded-lg border border-slate-200">
+                Next: Day {task.currentDay}
+              </span>
+            </div>
+
+            <div className="pt-2">
+              <button
+                type="button"
+                onClick={() => setSelectedTaskForProof(null)}
+                className="w-full rounded-xl bg-slate-900 hover:bg-slate-800 text-white py-2.5 text-xs font-bold transition-all shadow-xs"
+              >
+                Close & Return
+              </button>
+            </div>
+          </div>
+        ) : (
+          /* Verification Steps Form */
+          <form onSubmit={handleSubmitProof} className="mt-4 space-y-4">
           
           {/* Step 1 & Step 2: Group & Play Store Links */}
-          <div>
-            <span className="text-[11px] font-bold text-slate-700 block mb-2">
-              Step 1 & 2: Complete Google Play Opt-In
-            </span>
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
-              <a
-                href={task.app.groupUrl}
-                target="_blank"
-                rel="noopener noreferrer"
-                onClick={() => setVisitedGroup(true)}
-                className={`flex items-center justify-center gap-2 rounded-xl py-2.5 px-3 text-xs font-bold transition-all border ${
-                  visitedGroup 
-                    ? 'bg-emerald-50 text-emerald-800 border-emerald-300 shadow-xs' 
-                    : 'bg-slate-50 hover:bg-slate-100 text-slate-800 border-slate-200'
-                }`}
-              >
-                <Users className={`h-4 w-4 ${visitedGroup ? 'text-emerald-600' : 'text-indigo-600'}`} />
-                <span>{visitedGroup ? '✓ 1. Group Joined' : '1. Join Google Group'}</span>
-                <ExternalLink className="h-3 w-3 opacity-60" />
-              </a>
+          {isDayOne ? (
+            <div>
+              <span className="text-[11px] font-bold text-slate-700 block mb-2">
+                Step 1 & 2: Complete Google Play Opt-In (Day 1 Only)
+              </span>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
+                <a
+                  href={task.app.groupUrl}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  onClick={() => setVisitedGroup(true)}
+                  className={`flex items-center justify-center gap-2 rounded-xl py-2.5 px-3 text-xs font-bold transition-all border ${
+                    visitedGroup 
+                      ? 'bg-emerald-50 text-emerald-800 border-emerald-300 shadow-xs' 
+                      : 'bg-slate-50 hover:bg-slate-100 text-slate-800 border-slate-200'
+                  }`}
+                >
+                  <Users className={`h-4 w-4 ${visitedGroup ? 'text-emerald-600' : 'text-indigo-600'}`} />
+                  <span>{visitedGroup ? '✓ 1. Group Joined' : '1. Join Google Group'}</span>
+                  <ExternalLink className="h-3 w-3 opacity-60" />
+                </a>
 
+                <a
+                  href={task.app.storeAndroidUrl || task.app.storeWebUrl}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  onClick={() => setVisitedStore(true)}
+                  className={`flex items-center justify-center gap-2 rounded-xl py-2.5 px-3 text-xs font-bold transition-all border ${
+                    visitedStore 
+                      ? 'bg-emerald-50 text-emerald-800 border-emerald-300 shadow-xs' 
+                      : 'bg-indigo-50 hover:bg-indigo-100 text-indigo-800 border-indigo-200'
+                  }`}
+                >
+                  <Play className={`h-4 w-4 ${visitedStore ? 'text-emerald-600 fill-emerald-600' : 'text-indigo-600 fill-indigo-600'}`} />
+                  <span>{visitedStore ? '✓ 2. Play Store Opened' : '2. Open Play Store'}</span>
+                  <ExternalLink className="h-3 w-3 opacity-60" />
+                </a>
+              </div>
+            </div>
+          ) : (
+            <div className="flex items-center justify-between p-3 rounded-2xl bg-slate-50 border border-slate-200 text-xs">
+              <div className="flex items-center gap-2 text-emerald-800 font-semibold">
+                <CheckCircle2 className="h-4 w-4 text-emerald-600 shrink-0" />
+                <span>Google Group Opt-In Active (Day 1 Verified)</span>
+              </div>
               <a
                 href={task.app.storeAndroidUrl || task.app.storeWebUrl}
                 target="_blank"
                 rel="noopener noreferrer"
-                onClick={() => setVisitedStore(true)}
-                className={`flex items-center justify-center gap-2 rounded-xl py-2.5 px-3 text-xs font-bold transition-all border ${
-                  visitedStore 
-                    ? 'bg-emerald-50 text-emerald-800 border-emerald-300 shadow-xs' 
-                    : 'bg-indigo-50 hover:bg-indigo-100 text-indigo-800 border-indigo-200'
-                }`}
+                className="text-[11px] font-bold text-indigo-600 hover:text-indigo-700 underline flex items-center gap-1"
               >
-                <Play className={`h-4 w-4 ${visitedStore ? 'text-emerald-600 fill-emerald-600' : 'text-indigo-600 fill-indigo-600'}`} />
-                <span>{visitedStore ? '✓ 2. Play Store Opened' : '2. Open Play Store'}</span>
-                <ExternalLink className="h-3 w-3 opacity-60" />
+                <span>Launch App</span>
+                <ExternalLink className="h-3 w-3" />
               </a>
             </div>
-          </div>
+          )}
 
           {/* Active Testing Timer */}
           <div className={`p-3 rounded-2xl border flex items-center justify-between transition-all ${
@@ -363,6 +430,7 @@ export const TaskModal: React.FC = () => {
           </div>
 
         </form>
+        )}
 
       </div>
     </div>

@@ -110,6 +110,22 @@ try {
   // ignore
 }
 
+// Helper to check if a task's daily proof was already submitted today (same calendar day)
+export const isTaskProofSubmittedToday = (task?: TestingTask | null): boolean => {
+  if (!task || !task.lastFeedbackDate) return false;
+  try {
+    const lastDate = new Date(task.lastFeedbackDate);
+    const now = new Date();
+    return (
+      lastDate.getFullYear() === now.getFullYear() &&
+      lastDate.getMonth() === now.getMonth() &&
+      lastDate.getDate() === now.getDate()
+    );
+  } catch (e) {
+    return false;
+  }
+};
+
 export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   // Load initial state
   const [user, setUser] = useState<UserProfile | null>(() => {
@@ -605,6 +621,18 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     const targetTask = tasks.find((t) => t.id === taskId);
     if (!targetTask) {
       return { success: false, message: 'Testing task not found.' };
+    }
+
+    if (isTaskProofSubmittedToday(targetTask)) {
+      addToast(
+        'info',
+        'Daily Testing Completed ✓',
+        `You have already submitted today's testing proof for "${targetTask.app.title}". Please return tomorrow for Day ${targetTask.currentDay}!`
+      );
+      return {
+        success: false,
+        message: `You have already completed testing for today. Next session unlocks tomorrow.`,
+      };
     }
 
     const appReward = targetTask.app.rewardPerDay || 10;
