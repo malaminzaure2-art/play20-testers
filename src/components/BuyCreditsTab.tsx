@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { 
   CreditCard, 
   Coins, 
@@ -10,8 +10,6 @@ import {
   ChevronDown, 
   ChevronUp,
   Globe,
-  Building2,
-  Smartphone,
   Lock,
   ArrowRight
 } from 'lucide-react';
@@ -23,10 +21,32 @@ export const BuyCreditsTab: React.FC = () => {
   const { user, buyCredits, addToast } = useApp();
   const [selectedPackageForCheckout, setSelectedPackageForCheckout] = useState<CreditPackage | null>(null);
   const [isProcessing, setIsProcessing] = useState(false);
-  const [currency, setCurrency] = useState<'NGN' | 'USD'>('NGN');
+  const [currency, setCurrency] = useState<'USD' | 'NGN'>('USD');
   const [openFaqIndex, setOpenFaqIndex] = useState<number | null>(0);
 
   const PAYSTACK_PUBLIC_KEY = 'pk_live_ebdab74cbfcc040409a13d8234444db5ca620140';
+
+  // Completely Automatic Location & Currency Detection (Silent & Seamless)
+  useEffect(() => {
+    try {
+      const userTimeZone = Intl.DateTimeFormat().resolvedOptions().timeZone || '';
+      const userLocale = navigator.language || '';
+      
+      // If visitor is strictly inside Nigeria -> display NGN (₦)
+      if (
+        userTimeZone.includes('Lagos') || 
+        userLocale.toLowerCase().includes('ng') || 
+        userTimeZone.includes('Africa/Lagos')
+      ) {
+        setCurrency('NGN');
+      } else {
+        // All international visitors worldwide -> display pure USD ($)
+        setCurrency('USD');
+      }
+    } catch {
+      setCurrency('USD');
+    }
+  }, []);
 
   const handleOpenCheckout = (pkg: CreditPackage) => {
     if (!user) {
@@ -42,18 +62,13 @@ export const BuyCreditsTab: React.FC = () => {
 
     const triggerPopup = () => {
       try {
-        // Paystack amount in Kobo (1 Naira = 100 Kobo)
-        // If USD selected, calculate approximate NGN rate (e.g. 1550 NGN/USD) or use exact NGN price
-        const amountInKobo = currency === 'NGN' 
-          ? pkg.priceNgn * 100 
-          : Math.round(pkg.priceUsd * 1550 * 100);
-
+        const amountInKobo = pkg.priceNgn * 100;
         const txReference = `PL20_${Date.now()}_${Math.floor(Math.random() * 1000000)}`;
 
         if (typeof (window as any).PaystackPop !== 'undefined') {
           const handler = (window as any).PaystackPop.setup({
             key: PAYSTACK_PUBLIC_KEY,
-            email: user.email || 'developer@hausatech.com',
+            email: user.email || 'customer@hausatech.com',
             amount: amountInKobo,
             currency: 'NGN',
             ref: txReference,
@@ -65,37 +80,30 @@ export const BuyCreditsTab: React.FC = () => {
                   value: user.displayName || 'Developer'
                 },
                 {
-                  display_name: 'Package Purchased',
+                  display_name: 'Package',
                   variable_name: 'package_name',
-                  value: `${pkg.name} (+${pkg.credits} Coins)`
+                  value: `${pkg.name} (${pkg.credits} Coins)`
                 },
                 {
                   display_name: 'User ID',
                   variable_name: 'user_uid',
                   value: user.uid
-                },
-                {
-                  display_name: 'Platform',
-                  variable_name: 'platform',
-                  value: 'Play Testers Platform'
                 }
               ]
             },
             callback: function(response: any) {
               setIsProcessing(false);
               setSelectedPackageForCheckout(null);
-              // Credit the coins to user balance & sync to Firestore
               buyCredits(pkg.id, response.reference || txReference);
             },
             onClose: function() {
               setIsProcessing(false);
-              addToast('info', 'Checkout Closed', 'You can complete your credit purchase anytime.');
+              addToast('info', 'Checkout Closed', 'You can complete your purchase whenever you are ready.');
             }
           });
 
           handler.openIframe();
         } else {
-          // Dynamic fallback if Paystack script is loading
           const script = document.createElement('script');
           script.src = 'https://js.paystack.co/v1/inline.js';
           script.onload = () => executePaystackPayment(pkg);
@@ -103,26 +111,28 @@ export const BuyCreditsTab: React.FC = () => {
         }
       } catch (err: any) {
         setIsProcessing(false);
-        console.error('Paystack Checkout Error:', err);
-        addToast('error', 'Payment Initialization Failed', 'Could not open Paystack gateway. Please check your connection.');
+        console.error('Checkout Error:', err);
+        addToast('error', 'Checkout Error', 'Could not open payment gateway. Please try again.');
       }
     };
 
     triggerPopup();
   };
 
+  const isNgn = currency === 'NGN';
+
   const FAQS = [
     {
       q: 'How many credits do I need for a 20-tester closed test?',
-      a: 'To satisfy Google Play, you need 20 testers for 14 continuous days. At standard reward rates (10 coins/day), that requires 200 base credits plus completion bonuses. The 250 Coins package fully funds your entire 14-day test.'
-    },
-    {
-      q: 'Can international and foreign cards pay via Paystack?',
-      a: 'Yes! Paystack supports cards globally (Mastercard, Visa, American Express, Apple Pay, Verve) from Nigeria, USA, UK, Europe, and over 100+ countries worldwide. Payments are converted automatically.'
+      a: 'To satisfy Google Play requirements, you need 20 testers for 14 continuous days. At standard reward rates (10 coins/day), that requires 200 base credits plus completion bonuses. The 250 Coins package fully funds your entire 14-day test with priority matching.'
     },
     {
       q: 'Can I get testers for free without buying credits?',
       a: 'Yes! Play20 is a 100% fair reciprocity exchange. By testing 2 peer apps for 14 days, you can earn over 300+ coins and fund your own app completely free of charge.'
+    },
+    {
+      q: 'Which payment methods are accepted?',
+      a: 'We accept all major credit and debit cards (Visa, Mastercard, American Express), Apple Pay, and secure instant payments globally.'
     },
     {
       q: 'How does the 30-Second Anti-Cheat timer protect my app?',
@@ -138,7 +148,7 @@ export const BuyCreditsTab: React.FC = () => {
     <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 py-8">
       
       {/* Header */}
-      <div className="text-center max-w-3xl mx-auto pb-8">
+      <div className="text-center max-w-3xl mx-auto pb-10">
         <div className="inline-flex items-center gap-1.5 rounded-full bg-indigo-50 border border-indigo-200 px-3.5 py-1 text-xs font-bold text-indigo-700 mb-3 shadow-xs">
           <Coins className="h-3.5 w-3.5" />
           <span>Developer Credit Store</span>
@@ -149,30 +159,6 @@ export const BuyCreditsTab: React.FC = () => {
         <p className="text-xs sm:text-sm text-slate-600 mt-2.5">
           Don't have time to test peer apps? Purchase instant developer credits to hire 20 verified Android testers immediately.
         </p>
-
-        {/* Currency Switcher */}
-        <div className="mt-6 inline-flex items-center gap-1 bg-slate-100 p-1 rounded-2xl border border-slate-200 shadow-inner">
-          <button
-            onClick={() => setCurrency('NGN')}
-            className={`px-4 py-1.5 rounded-xl text-xs font-bold transition-all ${
-              currency === 'NGN'
-                ? 'bg-white text-indigo-700 shadow-xs'
-                : 'text-slate-600 hover:text-slate-900'
-            }`}
-          >
-            🇳🇬 NGN (₦ Naira)
-          </button>
-          <button
-            onClick={() => setCurrency('USD')}
-            className={`px-4 py-1.5 rounded-xl text-xs font-bold transition-all ${
-              currency === 'USD'
-                ? 'bg-white text-indigo-700 shadow-xs'
-                : 'text-slate-600 hover:text-slate-900'
-            }`}
-          >
-            🌍 USD ($ Dollar)
-          </button>
-        </div>
 
         {user && (
           <div className="mt-4 inline-flex items-center gap-2 bg-white border border-slate-200 rounded-xl px-4 py-2 text-xs shadow-xs">
@@ -188,9 +174,7 @@ export const BuyCreditsTab: React.FC = () => {
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
         {CREDIT_PACKAGES.map((pkg) => {
           const isPopular = pkg.popular;
-          const displayPrice = currency === 'NGN' 
-            ? `₦${pkg.priceNgn.toLocaleString()}` 
-            : `$${pkg.priceUsd}`;
+          const displayPrice = isNgn ? `₦${pkg.priceNgn.toLocaleString()}` : `$${pkg.priceUsd}`;
 
           return (
             <div
@@ -267,7 +251,7 @@ export const BuyCreditsTab: React.FC = () => {
         })}
       </div>
 
-      {/* Paystack Security Banner */}
+      {/* Security Banner */}
       <div className="mt-12 rounded-3xl border border-indigo-100 bg-linear-to-r from-indigo-50/70 via-white to-indigo-50/40 p-6 sm:p-8 flex flex-col md:flex-row items-center justify-between gap-6 shadow-xs">
         <div className="flex items-start gap-4">
           <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-indigo-600 text-white shadow-md shadow-indigo-200 shrink-0">
@@ -275,17 +259,17 @@ export const BuyCreditsTab: React.FC = () => {
           </div>
           <div>
             <h4 className="text-base font-bold text-slate-900">
-              Secured by Paystack Payment Gateway
+              Secure Encrypted Payment Gateway
             </h4>
             <p className="text-xs text-slate-600 mt-1 max-w-xl leading-relaxed">
-              Pay securely using Nigerian & International ATM Cards (Mastercard, Visa, Verve), Bank Transfer (OPay, PalmPay, GTB, Kuda), USSD, or Apple Pay. Coins are instantly added to your dashboard upon completion.
+              Pay securely with Visa, Mastercard, American Express, Apple Pay, and international cards. Your testing coins are immediately credited to your balance upon payment completion.
             </p>
           </div>
         </div>
         <div className="flex items-center gap-2 shrink-0">
           <span className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-emerald-50 text-emerald-800 text-xs font-bold border border-emerald-200">
             <Lock className="h-3.5 w-3.5 text-emerald-600" />
-            <span>256-bit SSL Encrypted</span>
+            <span>256-bit SSL Protected</span>
           </span>
         </div>
       </div>
@@ -327,7 +311,7 @@ export const BuyCreditsTab: React.FC = () => {
         </div>
       </div>
 
-      {/* Paystack Checkout Modal */}
+      {/* Checkout Modal */}
       {selectedPackageForCheckout && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/60 backdrop-blur-sm p-4 animate-in fade-in duration-200">
           <div className="relative w-full max-w-md rounded-3xl border border-slate-200 bg-white p-6 sm:p-7 shadow-2xl">
@@ -338,7 +322,7 @@ export const BuyCreditsTab: React.FC = () => {
                   <CreditCard className="h-5 w-5" />
                 </div>
                 <div>
-                  <h4 className="text-sm font-bold text-slate-900">Paystack Secure Checkout</h4>
+                  <h4 className="text-sm font-bold text-slate-900">Secure Checkout</h4>
                   <p className="text-[11px] text-slate-500 font-medium">Instant Coin Credit to Account</p>
                 </div>
               </div>
@@ -362,7 +346,7 @@ export const BuyCreditsTab: React.FC = () => {
                 </div>
                 <div className="text-right">
                   <div className="text-lg font-extrabold text-slate-900">
-                    {currency === 'NGN' ? `₦${selectedPackageForCheckout.priceNgn.toLocaleString()}` : `$${selectedPackageForCheckout.priceUsd}`}
+                    {isNgn ? `₦${selectedPackageForCheckout.priceNgn.toLocaleString()}` : `$${selectedPackageForCheckout.priceUsd}`}
                   </div>
                   <div className="text-[10px] text-slate-400 font-medium">One-time payment</div>
                 </div>
@@ -372,20 +356,12 @@ export const BuyCreditsTab: React.FC = () => {
             {/* Accepted Methods Info */}
             <div className="mt-4 rounded-2xl border border-slate-100 bg-slate-50/70 p-3.5 space-y-2 text-xs text-slate-600">
               <div className="font-bold text-slate-800 text-[11px] uppercase tracking-wider">
-                Payment Options Included:
+                Supported Payment Methods:
               </div>
               <div className="grid grid-cols-2 gap-2 text-[11px]">
                 <div className="flex items-center gap-1.5 text-slate-700">
                   <CreditCard className="h-3.5 w-3.5 text-indigo-600" />
-                  <span>ATM Cards (Global & Local)</span>
-                </div>
-                <div className="flex items-center gap-1.5 text-slate-700">
-                  <Building2 className="h-3.5 w-3.5 text-emerald-600" />
-                  <span>Bank Transfer (Instant)</span>
-                </div>
-                <div className="flex items-center gap-1.5 text-slate-700">
-                  <Smartphone className="h-3.5 w-3.5 text-amber-600" />
-                  <span>USSD Banking Codes</span>
+                  <span>Mastercard & Visa</span>
                 </div>
                 <div className="flex items-center gap-1.5 text-slate-700">
                   <Globe className="h-3.5 w-3.5 text-blue-600" />
@@ -408,11 +384,11 @@ export const BuyCreditsTab: React.FC = () => {
                 className="flex-[2] rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white py-3 text-xs font-bold transition-all shadow-md shadow-indigo-200 flex items-center justify-center gap-2 active:scale-95 disabled:opacity-50"
               >
                 {isProcessing ? (
-                  <span>Opening Paystack...</span>
+                  <span>Opening Gateway...</span>
                 ) : (
                   <>
                     <Zap className="h-4 w-4 fill-white" />
-                    <span>Proceed to Pay {currency === 'NGN' ? `₦${selectedPackageForCheckout.priceNgn.toLocaleString()}` : `$${selectedPackageForCheckout.priceUsd}`}</span>
+                    <span>Pay {isNgn ? `₦${selectedPackageForCheckout.priceNgn.toLocaleString()}` : `$${selectedPackageForCheckout.priceUsd}`}</span>
                     <ArrowRight className="h-3.5 w-3.5" />
                   </>
                 )}
