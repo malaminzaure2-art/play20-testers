@@ -33,6 +33,7 @@ import {
   setDoc,
   getDoc,
   updateDoc,
+  deleteDoc,
   onSnapshot,
   query,
   where,
@@ -61,6 +62,13 @@ interface AppContextType {
     androidVersion: string
   ) => { success: boolean; message: string; coinsEarned?: number };
   addNewApp: (appData: Omit<AppListing, 'id' | 'ownerId' | 'ownerName' | 'ownerEmail' | 'currentTesters' | 'createdAt' | 'active'>) => boolean;
+  editingApp: AppListing | null;
+  setEditingApp: (app: AppListing | null) => void;
+  updateApp: (
+    appId: string,
+    updatedFields: Partial<Pick<AppListing, 'title' | 'description' | 'iconUrl' | 'groupUrl' | 'storeWebUrl' | 'storeAndroidUrl' | 'category' | 'packageName'>>
+  ) => boolean;
+  deleteApp: (appId: string) => boolean;
   buyCredits: (packageId: string) => void;
   selectedTaskForProof: TestingTask | null;
   setSelectedTaskForProof: (task: TestingTask | null) => void;
@@ -158,6 +166,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   const [selectedCategory, setSelectedCategory] = useState<string>('All');
 
   // Modals state
+  const [editingApp, setEditingApp] = useState<AppListing | null>(null);
   const [selectedTaskForProof, setSelectedTaskForProof] = useState<TestingTask | null>(null);
   const [selectedAppToJoin, setSelectedAppToJoin] = useState<AppListing | null>(null);
   const [isAddAppModalOpen, setIsAddAppModalOpen] = useState<boolean>(false);
@@ -793,6 +802,136 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     return true;
   };
 
+  // Update existing app details
+  const updateApp = (
+    appId: string,
+    updatedFields: Partial<Pick<AppListing, 'title' | 'description' | 'iconUrl' | 'groupUrl' | 'storeWebUrl' | 'storeAndroidUrl' | 'category' | 'packageName'>>
+  ): boolean => {
+    if (!user) {
+      addToast('error', 'Sign In Required', 'Please sign in to edit your app.');
+      return false;
+    }
+
+    const targetApp = apps.find((a) => a.id === appId);
+    if (!targetApp) {
+      addToast('error', 'App Not Found', 'Application does not exist.');
+      return false;
+    }
+
+    if (targetApp.ownerId !== user.uid) {
+      addToast('error', 'Unauthorized', 'You can only edit applications you published.');
+      return false;
+    }
+
+    const updatedApp: AppListing = {
+      ...targetApp,
+      ...updatedFields,
+    };
+
+    // Update apps list locally
+    setApps((prev) => prev.map((a) => (a.id === appId ? updatedApp : a)));
+
+    // Update active tasks referencing this app
+    setTasks((prev) =>
+      prev.map((t) => (t.appId === appId ? { ...t, app: updatedApp } : t))
+    );
+
+    // Save to Firestore
+    const fb = getFirebaseInstance();
+    if (fb && fb.db) {
+      try {
+        updateDoc(doc(fb.db, 'apps', appId), updatedFields).catch((err) =>
+          console.warn('Firestore app update error:', err)
+        );
+      } catch (e) {
+        console.warn('Firestore update exception:', e);
+      }
+    }
+
+    addToast(
+      'success',
+      'App Updated Successfully! ✏️',
+      `Changes to "${updatedApp.title}" have been saved.`
+    );
+    setEditingApp(null);
+    return true;
+  };
+
+  // Delete published app
+  const deleteApp = (appId: string): boolean => {
+    if (!user) {
+      addToast('error', 'Sign In Required', 'Please sign in to manage apps.');
+      return false;
+    }
+
+    const targetApp = apps.find((a) => a.id === appId);
+    if (!targetApp) {
+      addToast('error', 'App Not Found', 'Application does not exist.');
+      return false;
+    }
+
+    if (targetApp.ownerId !== user.uid) {
+      addToast('error', 'Unauthorized', 'You can only delete your own applications.');
+      return false;
+    }
+
+    const hadZeroTesters = targetApp.currentTesters === 0;
+    const refundAmount = hadZeroTesters ? 100 : 0;
+
+    // Remove app from local state
+    setApps((prev) => prev.filter((a) => a.id !== appId));
+
+    // Remove related tasks
+    setTasks((prev) => prev.filter((t) => t.appId !== appId));
+
+    // If 0 testers joined, refund 100 coins
+    if (refundAmount > 0) {
+      setUser((prev) =>
+        prev
+          ? {
+              ...prev,
+              credits: prev.credits + refundAmount,
+              appsSubmittedCount: Math.max(0, prev.appsSubmittedCount - 1),
+            }
+          : null
+      );
+    }
+
+    // Firestore delete
+    const fb = getFirebaseInstance();
+    if (fb && fb.db) {
+      try {
+        deleteDoc(doc(fb.db, 'apps', appId)).catch((err) =>
+          console.warn('Firestore app delete error:', err)
+        );
+        if (refundAmount > 0 && user.uid) {
+          updateDoc(doc(fb.db, 'users', user.uid), {
+            credits: increment(refundAmount),
+            appsSubmittedCount: increment(-1),
+          }).catch((err) => console.warn('Firestore refund error:', err));
+        }
+      } catch (e) {
+        console.warn('Firestore delete exception:', e);
+      }
+    }
+
+    if (refundAmount > 0) {
+      addToast(
+        'info',
+        'App Deleted & Refunded 🔄',
+        `"${targetApp.title}" was removed. Since 0 testers joined, +100 Coins were refunded to your balance!`
+      );
+    } else {
+      addToast(
+        'info',
+        'App Removed from Exchange 🗑️',
+        `"${targetApp.title}" was removed from the active testing list.`
+      );
+    }
+
+    return true;
+  };
+
   // Buy Credits
   const buyCredits = (packageId: string, reference?: string) => {
     const pkg = CREDIT_PACKAGES.find((p) => p.id === packageId);
@@ -910,6 +1049,10 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         joinAppTest,
         submitDailyProof,
         addNewApp,
+        editingApp,
+        setEditingApp,
+        updateApp,
+        deleteApp,
         buyCredits,
         selectedTaskForProof,
         setSelectedTaskForProof,

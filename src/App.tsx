@@ -8,6 +8,7 @@ import { MyAppsTab } from './components/MyAppsTab';
 import { BuyCreditsTab } from './components/BuyCreditsTab';
 import { TaskModal } from './components/TaskModal';
 import { AddAppModal } from './components/AddAppModal';
+import { EditAppModal } from './components/EditAppModal';
 import { DeployGuideModal } from './components/DeployGuideModal';
 import { FirebaseSettingsModal } from './components/FirebaseSettingsModal';
 import { ReferralModal } from './components/ReferralModal';
@@ -44,6 +45,7 @@ const MainContent: React.FC = () => {
       <AuthModal />
       <TaskModal />
       <AddAppModal />
+      <EditAppModal />
       <DeployGuideModal />
       <FirebaseSettingsModal />
       <ReferralModal />

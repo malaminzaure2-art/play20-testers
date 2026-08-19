@@ -14,13 +14,18 @@ import {
   Smartphone, 
   ChevronDown, 
   ChevronUp, 
-  AlertCircle
+  AlertCircle,
+  Edit3,
+  Trash2,
+  Coins
 } from 'lucide-react';
 import { useApp } from '../context/AppContext';
+import { AppListing } from '../types';
 
 export const MyAppsTab: React.FC = () => {
-  const { apps, user, setIsAddAppModalOpen, addToast, tasks } = useApp();
+  const { apps, user, setIsAddAppModalOpen, addToast, tasks, setEditingApp, deleteApp } = useApp();
   const [expandedAppId, setExpandedAppId] = useState<string | null>(null);
+  const [appToDelete, setAppToDelete] = useState<AppListing | null>(null);
 
   const myApps = apps.filter((a) => a.ownerId === user?.uid);
 
@@ -211,16 +216,34 @@ export const MyAppsTab: React.FC = () => {
                   </div>
 
                   {/* Actions */}
-                  <div className="flex items-center gap-2.5 self-start lg:self-auto">
+                  <div className="flex flex-wrap items-center gap-2 self-start lg:self-auto">
                     <a
                       href={app.groupUrl}
                       target="_blank"
                       rel="noopener noreferrer"
-                      className="flex items-center gap-1.5 rounded-xl border border-slate-200 bg-slate-50 hover:bg-slate-100 text-slate-700 px-3.5 py-2 text-xs font-semibold transition-colors shadow-xs"
+                      className="flex items-center gap-1.5 rounded-xl border border-slate-200 bg-white hover:bg-slate-50 text-slate-700 px-3 py-1.5 text-xs font-semibold transition-colors shadow-xs"
                     >
                       <span>Google Group</span>
                       <ExternalLink className="h-3 w-3 text-slate-400" />
                     </a>
+
+                    <button
+                      type="button"
+                      onClick={() => setEditingApp(app)}
+                      className="flex items-center gap-1.5 rounded-xl border border-indigo-200 bg-indigo-50 hover:bg-indigo-100 text-indigo-700 px-3 py-1.5 text-xs font-bold transition-all shadow-xs active:scale-95"
+                    >
+                      <Edit3 className="h-3.5 w-3.5" />
+                      <span>Edit</span>
+                    </button>
+
+                    <button
+                      type="button"
+                      onClick={() => setAppToDelete(app)}
+                      className="flex items-center gap-1.5 rounded-xl border border-rose-200 bg-rose-50 hover:bg-rose-100 text-rose-700 px-3 py-1.5 text-xs font-bold transition-all shadow-xs active:scale-95"
+                    >
+                      <Trash2 className="h-3.5 w-3.5" />
+                      <span>Delete</span>
+                    </button>
                   </div>
                 </div>
 
@@ -322,6 +345,70 @@ export const MyAppsTab: React.FC = () => {
               </div>
             );
           })}
+        </div>
+      )}
+
+      {/* Delete App Confirmation Modal */}
+      {appToDelete && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/60 backdrop-blur-sm p-4 overflow-y-auto">
+          <div className="relative w-full max-w-md rounded-3xl border border-slate-200 bg-white p-6 shadow-2xl animate-in fade-in zoom-in-95 duration-200">
+            
+            <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-2xl bg-rose-50 border border-rose-200 text-rose-600 shadow-xs mb-4">
+              <Trash2 className="h-7 w-7" />
+            </div>
+
+            <h3 className="text-lg font-bold text-center text-slate-900">
+              Delete "{appToDelete.title}"?
+            </h3>
+
+            <p className="text-xs text-slate-600 text-center mt-2 leading-relaxed">
+              Are you sure you want to delete this app from the testing exchange?
+            </p>
+
+            {/* Refund info box */}
+            <div className="mt-4 rounded-2xl border p-3.5 text-xs text-left bg-slate-50 border-slate-200 space-y-2">
+              <div className="flex items-center justify-between">
+                <span className="text-slate-500 font-semibold">Active Testers:</span>
+                <span className="font-bold text-slate-800">{appToDelete.currentTesters} / {appToDelete.requiredTesters}</span>
+              </div>
+
+              {appToDelete.currentTesters === 0 ? (
+                <div className="flex items-center gap-2 text-emerald-800 bg-emerald-50 border border-emerald-200 p-2.5 rounded-xl text-xs font-bold">
+                  <Coins className="h-4 w-4 text-emerald-600 shrink-0" />
+                  <span>0 testers joined yet — 100 Coins will be refunded automatically to your balance!</span>
+                </div>
+              ) : (
+                <div className="flex items-center gap-2 text-amber-800 bg-amber-50 border border-amber-200 p-2.5 rounded-xl text-xs">
+                  <AlertCircle className="h-4 w-4 text-amber-600 shrink-0" />
+                  <span>This app has active testers. Deleting it will remove it from Explore immediately.</span>
+                </div>
+              )}
+            </div>
+
+            {/* Modal Actions */}
+            <div className="mt-6 flex items-center gap-3">
+              <button
+                type="button"
+                onClick={() => setAppToDelete(null)}
+                className="flex-1 rounded-xl border border-slate-300 bg-white py-2.5 text-xs font-bold text-slate-700 hover:bg-slate-50 transition-colors"
+              >
+                Cancel
+              </button>
+
+              <button
+                type="button"
+                onClick={() => {
+                  deleteApp(appToDelete.id);
+                  setAppToDelete(null);
+                }}
+                className="flex-1 rounded-xl bg-rose-600 hover:bg-rose-700 text-white py-2.5 text-xs font-bold shadow-sm shadow-rose-200 active:scale-95 transition-all flex items-center justify-center gap-1.5"
+              >
+                <Trash2 className="h-4 w-4" />
+                <span>Confirm Delete</span>
+              </button>
+            </div>
+
+          </div>
         </div>
       )}
 
