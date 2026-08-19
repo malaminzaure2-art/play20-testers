@@ -153,7 +153,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   const [isAuthModalOpen, setIsAuthModalOpen] = useState<boolean>(false);
   const [legalModalType, setLegalModalType] = useState<'privacy' | 'terms' | 'about' | 'contact' | 'adsense' | null>(null);
 
-  const [leaderboardUsers] = useState<LeaderboardUser[]>(MOCK_LEADERBOARD);
+  const [leaderboardUsers, setLeaderboardUsers] = useState<LeaderboardUser[]>([]);
   const [referrals, setReferrals] = useState<ReferralHistoryItem[]>(INITIAL_REFERRALS);
 
   // Sync to localStorage
@@ -268,6 +268,46 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       console.warn('Could not attach Firestore tasks listener:', err);
     }
   }, [user?.uid]);
+
+  // 4. REAL-TIME LEADERBOARD USERS SYNC FROM FIRESTORE
+  useEffect(() => {
+    const fb = getFirebaseInstance();
+    if (!fb || !fb.db) return;
+
+    try {
+      const usersCollection = collection(fb.db, 'users');
+      const unsubscribe = onSnapshot(usersCollection, (snapshot) => {
+        if (!snapshot.empty) {
+          const realUsers: UserProfile[] = [];
+          snapshot.forEach((d) => {
+            realUsers.push({ ...(d.data() as UserProfile), uid: d.id });
+          });
+
+          // Sort users by completed tests and credits
+          realUsers.sort((a, b) => (b.completedFullTests || b.appsTestedCount || 0) - (a.completedFullTests || a.appsTestedCount || 0) || (b.credits || 0) - (a.credits || 0));
+
+          const ranked: LeaderboardUser[] = realUsers.slice(0, 20).map((u, index) => ({
+            rank: index + 1,
+            uid: u.uid,
+            displayName: u.displayName || 'Developer',
+            photoURL: u.photoURL || '',
+            completedTests: u.completedFullTests || u.appsTestedCount || 0,
+            dailyStreak: u.dailyStreak || 1,
+            totalCoinsEarned: u.credits || 0,
+            badge: index === 0 ? 'Top Tester ⭐' : index === 1 ? 'Elite Dev 🚀' : 'Verified Tester 🛡️',
+          }));
+
+          setLeaderboardUsers(ranked);
+        }
+      }, (err) => {
+        console.warn('Leaderboard sync notice:', err.message);
+      });
+
+      return () => unsubscribe();
+    } catch (e) {
+      console.warn('Leaderboard fetch notice:', e);
+    }
+  }, []);
 
   const addToast = (type: ToastMessage['type'], title: string, message: string) => {
     const id = 'toast_' + Date.now() + Math.random().toString(36).substring(2, 6);

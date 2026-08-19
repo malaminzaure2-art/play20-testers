@@ -269,58 +269,6 @@ export const SidebarDrawer: React.FC = () => {
                     +50 Coins
                   </span>
                 </button>
-
-                <button
-                  onClick={() => {
-                    setIsSidebarOpen(false);
-                    setIsLeaderboardModalOpen(true);
-                  }}
-                  className="w-full flex items-center justify-between px-3 py-2.5 rounded-xl text-xs font-semibold text-slate-700 hover:bg-amber-50/70 hover:text-amber-900 transition-all border border-transparent hover:border-amber-100"
-                >
-                  <div className="flex items-center gap-2.5">
-                    <Trophy className="h-4 w-4 text-amber-500 fill-amber-400" />
-                    <span>Top Active Testers</span>
-                  </div>
-                  <span className="text-[10px] font-bold text-amber-700">
-                    Leaderboard 🏆
-                  </span>
-                </button>
-              </div>
-            </div>
-
-            {/* Developer Guides & Tools */}
-            <div>
-              <span className="px-3 text-[10px] font-bold text-slate-400 uppercase tracking-wider block mb-1.5">
-                Support & Guides
-              </span>
-              <div className="space-y-1">
-                <button
-                  onClick={() => {
-                    setIsSidebarOpen(false);
-                    setIsDeployGuideOpen(true);
-                  }}
-                  className="w-full flex items-center justify-between px-3 py-2.5 rounded-xl text-xs font-semibold text-slate-700 hover:bg-slate-100 hover:text-slate-900 transition-all"
-                >
-                  <div className="flex items-center gap-2.5">
-                    <BookOpen className="h-4 w-4 text-indigo-600" />
-                    <span>Play Console 14-Day Guide</span>
-                  </div>
-                  <ChevronRight className="h-3.5 w-3.5 text-slate-400" />
-                </button>
-
-                <button
-                  onClick={() => {
-                    setIsSidebarOpen(false);
-                    setIsFirebaseModalOpen(true);
-                  }}
-                  className="w-full flex items-center justify-between px-3 py-2.5 rounded-xl text-xs font-semibold text-slate-700 hover:bg-slate-100 hover:text-slate-900 transition-all"
-                >
-                  <div className="flex items-center gap-2.5">
-                    <Database className="h-4 w-4 text-indigo-600" />
-                    <span>Live Database Sync</span>
-                  </div>
-                  <span className="h-2 w-2 rounded-full bg-emerald-500" />
-                </button>
               </div>
             </div>
 

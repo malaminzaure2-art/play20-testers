@@ -11,7 +11,11 @@ import {
   HelpCircle,
   ExternalLink,
   Sparkles,
-  DollarSign
+  DollarSign,
+  Code2,
+  Smartphone,
+  Globe2,
+  ArrowRight
 } from 'lucide-react';
 import { useApp } from '../context/AppContext';
 
@@ -60,14 +64,14 @@ export const LegalModals: React.FC = () => {
                 {legalModalType === 'privacy' && 'Official Compliance • GDPR & CCPA'}
                 {legalModalType === 'terms' && 'Platform Agreement • Community Guidelines'}
                 {legalModalType === 'about' && 'About Play20 • Android Dev Community'}
-                {legalModalType === 'contact' && 'Support & Inquiries • 24/7 Response'}
+                {legalModalType === 'contact' && 'Support & Engineering Services • Worldwide'}
                 {legalModalType === 'adsense' && 'Google AdSense Checklist & Approval'}
               </span>
               <h3 className="text-base sm:text-lg font-bold text-slate-900">
                 {legalModalType === 'privacy' && 'Privacy Policy & Cookie Policy'}
                 {legalModalType === 'terms' && 'Terms of Service & Rules'}
                 {legalModalType === 'about' && 'About Play20 Testers Platform'}
-                {legalModalType === 'contact' && 'Contact Us & Developer Support'}
+                {legalModalType === 'contact' && 'Contact Us & Custom Development'}
                 {legalModalType === 'adsense' && 'Google AdSense Monetization Guide'}
               </h3>
             </div>
@@ -88,7 +92,7 @@ export const LegalModals: React.FC = () => {
           {legalModalType === 'privacy' && (
             <>
               <p className="font-medium text-slate-700">
-                Last updated: August 2026. At <strong>Play20 Testers</strong> (referred to as "we", "our", or "the Platform"), we are deeply committed to protecting your privacy and ensuring transparency in all our data handling practices.
+                Last updated: August 2026. At <strong>Play20 Testers</strong> (referred to as "we", "our", or "the Platform"), we are deeply committed to protecting your privacy and ensuring complete transparency in all our data handling practices.
               </p>
 
               <div className="rounded-2xl border border-indigo-100 bg-indigo-50/50 p-3.5 space-y-1.5">
@@ -129,7 +133,7 @@ export const LegalModals: React.FC = () => {
                   4. Data Rights (GDPR & CCPA)
                 </h4>
                 <p>
-                  You have the right to request access to, correction of, or permanent deletion of your account and submitted data at any time by contacting our privacy compliance team at <strong>privacy@play20.app</strong>.
+                  You have the right to request access to, correction of, or permanent deletion of your account and submitted data at any time by contacting our compliance officer at <strong>msngapps@gmail.com</strong>.
                 </p>
               </div>
             </>
@@ -221,26 +225,72 @@ export const LegalModals: React.FC = () => {
             </>
           )}
 
-          {/* CONTACT US */}
+          {/* CONTACT US + CUSTOM DEV SERVICES */}
           {legalModalType === 'contact' && (
             <>
-              <p className="text-xs text-slate-700 font-medium">
-                Have questions about 14-day closed testing, need help with your app listing, or want to report an issue? Our team is available 24/7.
-              </p>
+              {/* Promotional Banner: Custom Web & Mobile App Development */}
+              <div className="rounded-3xl border-2 border-indigo-500/30 bg-gradient-to-br from-indigo-900 via-indigo-800 to-slate-900 p-5 text-white shadow-xl relative overflow-hidden">
+                <div className="absolute top-0 right-0 -mt-4 -mr-4 h-24 w-24 rounded-full bg-indigo-500/20 blur-xl pointer-events-none" />
+                
+                <div className="flex items-center gap-2 mb-2">
+                  <span className="rounded-full bg-amber-400 text-slate-950 text-[10px] font-black uppercase px-2.5 py-0.5 tracking-wider shadow-xs">
+                    ★ Available For Hire Worldwide
+                  </span>
+                </div>
 
-              <div className="mt-3 grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <h4 className="text-sm sm:text-base font-extrabold text-white leading-tight">
+                  Need a Custom Android App, iOS App, or Web Platform?
+                </h4>
+                
+                <p className="text-xs text-indigo-100 mt-1.5 leading-relaxed">
+                  We build world-class mobile applications, high-performance web systems, SaaS platforms, and backend APIs for individuals, startups, and businesses worldwide with fast delivery and premium design.
+                </p>
+
+                <div className="mt-3.5 flex flex-wrap items-center gap-2">
+                  <span className="inline-flex items-center gap-1 rounded-lg bg-white/10 px-2 py-1 text-[11px] font-semibold text-white backdrop-blur-xs">
+                    <Smartphone className="h-3.5 w-3.5 text-amber-300" />
+                    Android & iOS Apps
+                  </span>
+                  <span className="inline-flex items-center gap-1 rounded-lg bg-white/10 px-2 py-1 text-[11px] font-semibold text-white backdrop-blur-xs">
+                    <Globe2 className="h-3.5 w-3.5 text-cyan-300" />
+                    Full-Stack Web & SaaS
+                  </span>
+                  <span className="inline-flex items-center gap-1 rounded-lg bg-white/10 px-2 py-1 text-[11px] font-semibold text-white backdrop-blur-xs">
+                    <Code2 className="h-3.5 w-3.5 text-emerald-300" />
+                    Play Console & Store Setup
+                  </span>
+                </div>
+
+                <div className="mt-4 pt-3 border-t border-white/10 flex items-center justify-between">
+                  <span className="text-[11px] font-medium text-indigo-200">
+                    Direct developer inquiry:
+                  </span>
+                  <a
+                    href="mailto:msngapps@gmail.com?subject=Custom%20App%2FWeb%20Development%20Inquiry"
+                    className="inline-flex items-center gap-1.5 rounded-xl bg-white text-indigo-950 px-3.5 py-1.5 text-xs font-bold hover:bg-amber-300 transition-all shadow-xs"
+                  >
+                    <span>Hire Us / Email Us</span>
+                    <ArrowRight className="h-3.5 w-3.5" />
+                  </a>
+                </div>
+              </div>
+
+              {/* Direct Contact Cards */}
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mt-4">
                 <div className="rounded-2xl border border-slate-200 bg-slate-50 p-4">
                   <Mail className="h-5 w-5 text-indigo-600 mb-1.5" />
-                  <span className="text-[10px] font-bold text-slate-400 uppercase block">Developer Support Email</span>
-                  <span className="text-xs font-bold text-slate-900">support@play20.app</span>
-                  <p className="text-[10px] text-slate-500 mt-1">Average response time: &lt;4 hours</p>
+                  <span className="text-[10px] font-bold text-slate-400 uppercase block">Official Email Address</span>
+                  <a href="mailto:msngapps@gmail.com" className="text-xs font-bold text-indigo-600 hover:underline">
+                    msngapps@gmail.com
+                  </a>
+                  <p className="text-[10px] text-slate-500 mt-1">Direct developer & business support</p>
                 </div>
 
                 <div className="rounded-2xl border border-slate-200 bg-slate-50 p-4">
                   <ShieldCheck className="h-5 w-5 text-emerald-600 mb-1.5" />
-                  <span className="text-[10px] font-bold text-slate-400 uppercase block">Legal & Privacy Inquiries</span>
-                  <span className="text-xs font-bold text-slate-900">privacy@play20.app</span>
-                  <p className="text-[10px] text-slate-500 mt-1">For GDPR, account deletion & DMCA</p>
+                  <span className="text-[10px] font-bold text-slate-400 uppercase block">Worldwide Service</span>
+                  <span className="text-xs font-bold text-slate-900">Global Client Support</span>
+                  <p className="text-[10px] text-slate-500 mt-1">Average response: Under 4 hours</p>
                 </div>
               </div>
 
@@ -248,37 +298,46 @@ export const LegalModals: React.FC = () => {
               <form 
                 onSubmit={(e) => {
                   e.preventDefault();
-                  addToast('success', 'Message Sent! ✉️', 'Thank you! Our support team will respond to your email within a few hours.');
+                  const target = e.target as any;
+                  const email = target.email?.value || '';
+                  const subject = target.subject?.value || 'General Inquiry';
+                  const message = target.message?.value || '';
+                  window.location.href = `mailto:msngapps@gmail.com?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(`From: ${email}\n\n${message}`)}`;
+                  addToast('success', 'Email Client Opened ✉️', 'Please send the message through your email app to msngapps@gmail.com.');
                   closeModal();
                 }}
                 className="mt-4 space-y-3 pt-3 border-t border-slate-100"
               >
+                <h5 className="font-bold text-slate-900 text-xs">Send Direct Message / Project Brief</h5>
                 <div>
                   <label className="block text-[11px] font-bold text-slate-700 mb-1">Your Email</label>
                   <input
+                    name="email"
                     type="email"
                     required
-                    placeholder="developer@gmail.com"
+                    placeholder="yourname@gmail.com"
                     className="w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-xs text-slate-800 placeholder-slate-400 focus:border-indigo-600 focus:outline-none"
                   />
                 </div>
 
                 <div>
-                  <label className="block text-[11px] font-bold text-slate-700 mb-1">Subject / Question</label>
+                  <label className="block text-[11px] font-bold text-slate-700 mb-1">Subject / Project Requirement</label>
                   <input
+                    name="subject"
                     type="text"
                     required
-                    placeholder="E.g., How to add opt-in link, coin purchase issue..."
+                    placeholder="E.g., I want to build a Flutter app / Web dashboard / Support inquiry"
                     className="w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-xs text-slate-800 placeholder-slate-400 focus:border-indigo-600 focus:outline-none"
                   />
                 </div>
 
                 <div>
-                  <label className="block text-[11px] font-bold text-slate-700 mb-1">Message</label>
+                  <label className="block text-[11px] font-bold text-slate-700 mb-1">Message / Details</label>
                   <textarea
+                    name="message"
                     rows={3}
                     required
-                    placeholder="Describe your inquiry or app details..."
+                    placeholder="Describe your request or project specifications..."
                     className="w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-xs text-slate-800 placeholder-slate-400 focus:border-indigo-600 focus:outline-none"
                   />
                 </div>
@@ -287,7 +346,7 @@ export const LegalModals: React.FC = () => {
                   type="submit"
                   className="w-full rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white py-2.5 text-xs font-bold transition-all shadow-xs"
                 >
-                  Submit Inquiry
+                  Send to msngapps@gmail.com
                 </button>
               </form>
             </>
@@ -300,10 +359,10 @@ export const LegalModals: React.FC = () => {
                 <div className="rounded-2xl border border-amber-200 bg-amber-50/70 p-3.5 space-y-2">
                   <h4 className="font-bold text-amber-950 text-xs flex items-center gap-1.5">
                     <Sparkles className="h-4 w-4 text-amber-600" />
-                    Google AdSense Policy Checklist (100% Prepared)
+                    Google AdSense Approval & Readiness Guide
                   </h4>
                   <p className="text-[11px] text-slate-700">
-                    To get approved for Google AdSense on your domain (e.g. <code>play20.app</code> or your custom domain), Google evaluates the following 5 requirements:
+                    To get approved for Google AdSense on your domain (e.g. <code>testers.hausatech.com</code> or your root domain), Google evaluates the following core pillars:
                   </p>
                 </div>
 
@@ -311,40 +370,40 @@ export const LegalModals: React.FC = () => {
                   <div className="flex items-start gap-2.5 p-2.5 rounded-xl border border-slate-100 bg-slate-50">
                     <CheckCircle2 className="h-4 w-4 text-emerald-600 shrink-0 mt-0.5" />
                     <div>
-                      <strong className="text-slate-900 block">1. Mandatory Legal Pages (Ready ✅)</strong>
-                      <span className="text-[11px] text-slate-500">Privacy Policy (with Google Cookie & GDPR clauses), Terms of Service, About Us, and Contact Us are fully active on this site.</span>
+                      <strong className="text-slate-900 block">1. Mandatory Legal Pages (Fully Active ✅)</strong>
+                      <span className="text-[11px] text-slate-500">Privacy Policy (with Google DoubleClick Cookie & GDPR clauses), Terms of Service, About Us, and Contact Us are fully active on this site.</span>
                     </div>
                   </div>
 
                   <div className="flex items-start gap-2.5 p-2.5 rounded-xl border border-slate-100 bg-slate-50">
                     <CheckCircle2 className="h-4 w-4 text-emerald-600 shrink-0 mt-0.5" />
                     <div>
-                      <strong className="text-slate-900 block">2. High Quality & Functional Content (Ready ✅)</strong>
-                      <span className="text-[11px] text-slate-500">The site contains a real, highly useful interactive tool (Android 14-day closed testing matching platform with real workflows).</span>
+                      <strong className="text-slate-900 block">2. High Utility & Original Service (Fully Active ✅)</strong>
+                      <span className="text-[11px] text-slate-500">The site provides a valuable utility tool (Android 14-day closed testing peer exchange network), which AdSense favors over low-effort blogs.</span>
                     </div>
                   </div>
 
                   <div className="flex items-start gap-2.5 p-2.5 rounded-xl border border-slate-100 bg-slate-50">
                     <CheckCircle2 className="h-4 w-4 text-emerald-600 shrink-0 mt-0.5" />
                     <div>
-                      <strong className="text-slate-900 block">3. Easy & Clear Navigation (Ready ✅)</strong>
-                      <span className="text-[11px] text-slate-500">Desktop & Mobile Navigation with Sidebar menu, bottom bar, and search filters.</span>
+                      <strong className="text-slate-900 block">3. Responsive UI & Clean Navigation (Fully Active ✅)</strong>
+                      <span className="text-[11px] text-slate-500">Fast, mobile-friendly interface with search bar, tab navigation, and clear call-to-actions.</span>
                     </div>
                   </div>
 
                   <div className="flex items-start gap-2.5 p-2.5 rounded-xl border border-slate-100 bg-slate-50">
                     <CheckCircle2 className="h-4 w-4 text-emerald-600 shrink-0 mt-0.5" />
                     <div>
-                      <strong className="text-slate-900 block">4. Custom Domain & SSL (HTTPS)</strong>
-                      <span className="text-[11px] text-slate-500">Connect your custom domain (e.g. <code>yourname.com</code>) in Google AdSense dashboard.</span>
+                      <strong className="text-slate-900 block">4. SSL / HTTPS Security (Ready on Vercel ✅)</strong>
+                      <span className="text-[11px] text-slate-500">Your site uses automatic HTTPS encryption required by modern AdSense policies.</span>
                     </div>
                   </div>
 
                   <div className="flex items-start gap-2.5 p-2.5 rounded-xl border border-slate-100 bg-slate-50">
                     <CheckCircle2 className="h-4 w-4 text-emerald-600 shrink-0 mt-0.5" />
                     <div>
-                      <strong className="text-slate-900 block">5. ads.txt File (Placed in /public/ads.txt)</strong>
-                      <span className="text-[11px] text-slate-500">When Google approves your account, add your publisher ID: <code>google.com, pub-XXXXXXXXXXXXXXXX, DIRECT, f08c47fec0942fa0</code>.</span>
+                      <strong className="text-slate-900 block">5. ads.txt File (Placed in /public/ads.txt ✅)</strong>
+                      <span className="text-[11px] text-slate-500">Once your AdSense account is created, you simply add your publisher code (<code>pub-XXXXXXXXXXXXXXXX</code>) to public/ads.txt.</span>
                     </div>
                   </div>
                 </div>
@@ -357,7 +416,7 @@ export const LegalModals: React.FC = () => {
         {/* Footer Action */}
         <div className="mt-4 pt-3 border-t border-slate-100 flex items-center justify-between shrink-0">
           <span className="text-[10px] text-slate-400 font-medium">
-            Play20 Compliance Center
+            Contact: msngapps@gmail.com
           </span>
           <button
             onClick={closeModal}

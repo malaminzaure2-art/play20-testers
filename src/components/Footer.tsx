@@ -53,14 +53,6 @@ export const Footer: React.FC = () => {
             <ul className="space-y-2 text-xs">
               <li>
                 <button
-                  onClick={() => setIsDeployGuideOpen(true)}
-                  className="text-slate-600 hover:text-indigo-600 transition-colors"
-                >
-                  14-Day Closed Testing Checklist
-                </button>
-              </li>
-              <li>
-                <button
                   onClick={() => setLegalModalType('about')}
                   className="text-slate-600 hover:text-indigo-600 transition-colors"
                 >

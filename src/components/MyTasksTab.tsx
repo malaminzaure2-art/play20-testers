@@ -72,13 +72,6 @@ export const MyTasksTab: React.FC = () => {
               <span className="text-[10px] text-slate-500 font-medium">+10 Bonus Coins incoming</span>
             </div>
           </div>
-          <button
-            onClick={() => setIsLeaderboardModalOpen(true)}
-            className="rounded-xl border border-orange-200 bg-white hover:bg-orange-100/60 p-2 text-xs font-bold text-orange-800 transition-colors shadow-xs"
-            title="View Leaderboard"
-          >
-            <Trophy className="h-4 w-4 text-orange-600" />
-          </button>
         </div>
 
         <div className="rounded-2xl border border-emerald-100 bg-emerald-50/70 p-4 flex items-center justify-between">

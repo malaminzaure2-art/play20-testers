@@ -77,32 +77,4 @@ export const CREDIT_PACKAGES: CreditPackage[] = [
   },
 ];
 
-export const MOCK_LEADERBOARD: LeaderboardUser[] = [
-  {
-    rank: 1,
-    name: 'DevTariq',
-    appsTested: 48,
-    totalCoinsEarned: 1420,
-    avatar: 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=100&auto=format&fit=crop&q=80',
-    rankTitle: 'Grandmaster Tester',
-    badgeColor: 'text-amber-500 bg-amber-50 border-amber-200',
-  },
-  {
-    rank: 2,
-    name: 'Elena_Code',
-    appsTested: 41,
-    totalCoinsEarned: 1190,
-    avatar: 'https://images.unsplash.com/photo-1580489944761-15a19d654956?w=100&auto=format&fit=crop&q=80',
-    rankTitle: 'Master Tester',
-    badgeColor: 'text-slate-400 bg-slate-50 border-slate-200',
-  },
-  {
-    rank: 3,
-    name: 'KenjiDev',
-    appsTested: 35,
-    totalCoinsEarned: 980,
-    avatar: 'https://images.unsplash.com/photo-1570295999919-56ceb5ecca61?w=100&auto=format&fit=crop&q=80',
-    rankTitle: 'Elite Tester',
-    badgeColor: 'text-amber-700 bg-amber-50 border-amber-200',
-  },
-];
+export const MOCK_LEADERBOARD: LeaderboardUser[] = [];
