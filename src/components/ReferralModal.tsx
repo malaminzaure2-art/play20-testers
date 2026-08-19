@@ -26,7 +26,9 @@ export const ReferralModal: React.FC = () => {
   if (!isReferralModalOpen) return null;
 
   const referralCode = user?.referralCode || 'PLAY20-MZ88';
-  const baseUrl = typeof window !== 'undefined' ? window.location.origin : 'https://play20-testers.vercel.app';
+  const baseUrl = typeof window !== 'undefined' && window.location.origin.includes('hausatech')
+    ? window.location.origin 
+    : (typeof window !== 'undefined' ? window.location.origin : 'https://testers.hausatech.com');
   const referralLink = `${baseUrl}?ref=${referralCode}`;
   const shareText = `🚀 Join me on Play20! Test Android apps for 14 days and get 20 free testers for your own Google Play app. Use my invite link to get +50 FREE Coins: ${referralLink}`;
 

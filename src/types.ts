@@ -79,8 +79,10 @@ export interface CreditPackage {
   name: string;
   credits: number;
   priceUsd: number;
+  priceNgn: number;
   popular?: boolean;
   tag?: string;
+  badge?: string;
   description: string;
   features: string[];
 }

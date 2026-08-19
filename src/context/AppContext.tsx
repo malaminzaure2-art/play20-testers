@@ -350,7 +350,8 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     } catch (popupErr: any) {
       console.error('Firebase Google popup error:', popupErr);
       if (popupErr.code === 'auth/unauthorized-domain') {
-        throw new Error('This domain (play20-testers.vercel.app) needs to be added to Authorized Domains in Firebase Console.');
+        const currentHost = typeof window !== 'undefined' ? window.location.hostname : 'domain';
+        throw new Error(`Google sign-in domain not authorized yet for "${currentHost}". Please use Email/Password sign-in below, or add "${currentHost}" in Firebase Console -> Authentication -> Settings -> Authorized Domains.`);
       } else if (popupErr.code === 'auth/popup-closed-by-user') {
         throw new Error('Sign-in popup was closed before completing. Please try again.');
       } else if (popupErr.code === 'auth/popup-blocked') {
@@ -724,7 +725,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   };
 
   // Buy Credits
-  const buyCredits = (packageId: string) => {
+  const buyCredits = (packageId: string, reference?: string) => {
     const pkg = CREDIT_PACKAGES.find((p) => p.id === packageId);
     if (!pkg) return;
 
@@ -741,20 +742,39 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       updateDoc(doc(fb.db, 'users', user.uid), {
         credits: increment(pkg.credits),
       }).catch((e) => console.warn('Firestore credit update:', e));
+
+      // Record transaction history
+      const txId = reference || `TX_${Date.now()}_${Math.floor(Math.random() * 1000)}`;
+      setDoc(doc(fb.db, 'transactions', txId), {
+        id: txId,
+        reference: reference || 'direct_checkout',
+        userId: user.uid,
+        userEmail: user.email,
+        userName: user.displayName,
+        packageId: pkg.id,
+        packageName: pkg.name,
+        coinsAwarded: pkg.credits,
+        priceNgn: pkg.priceNgn,
+        priceUsd: pkg.priceUsd,
+        timestamp: new Date().toISOString(),
+        status: 'success',
+      }).catch((e) => console.warn('Firestore transaction log:', e));
     }
 
     fireConfetti();
     addToast(
       'success',
-      'Credit Purchase Successful! 💳',
-      `Added ${pkg.credits} Coins to your account! You can now launch your 20-tester closed test.`
+      'Payment Confirmed! 💳 🎉',
+      `+${pkg.credits} Coins have been added to your balance! (Ref: ${reference || 'Instant'})`
     );
   };
 
   // Referral Copy Link
   const copyReferralLink = () => {
     const code = user?.referralCode || 'PLAY20-MZ88';
-    const baseUrl = typeof window !== 'undefined' ? window.location.origin : 'https://play20-testers.vercel.app';
+    const baseUrl = typeof window !== 'undefined' && window.location.origin.includes('hausatech')
+      ? window.location.origin 
+      : (typeof window !== 'undefined' ? window.location.origin : 'https://testers.hausatech.com');
     const link = `${baseUrl}?ref=${code}`;
     navigator.clipboard.writeText(link).catch(() => {});
     addToast(
