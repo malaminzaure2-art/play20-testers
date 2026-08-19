@@ -595,10 +595,10 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       return { success: false, message: 'Please sign in first.' };
     }
 
-    if (feedbackText.trim().length < 50) {
+    if (feedbackText.trim().length < 25) {
       return {
         success: false,
-        message: `Feedback must be at least 50 characters long for Google Play quality guidelines (currently ${feedbackText.trim().length} chars).`,
+        message: `Feedback must be at least 25 characters long for Google Play quality guidelines (currently ${feedbackText.trim().length} chars).`,
       };
     }
 
