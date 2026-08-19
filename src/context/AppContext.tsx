@@ -534,7 +534,8 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   // Join testing task for an app
   const joinAppTest = (app: AppListing): boolean => {
     if (!user) {
-      addToast('warning', 'Sign In Required', 'Please sign in to start testing apps.');
+      setIsAuthModalOpen(true);
+      addToast('info', 'Sign In Required', 'Please sign in or create an account to start testing apps and earning coins.');
       return false;
     }
 

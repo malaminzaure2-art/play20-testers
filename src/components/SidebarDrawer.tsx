@@ -38,7 +38,8 @@ export const SidebarDrawer: React.FC = () => {
     setIsAuthModalOpen,
     setLegalModalType,
     signOutUser,
-    signInWithGoogle
+    signInWithGoogle,
+    addToast
   } = useApp();
 
   if (!isSidebarOpen) return null;
@@ -46,8 +47,34 @@ export const SidebarDrawer: React.FC = () => {
   const activeTasksCount = tasks.filter((t) => t.status === 'active').length;
 
   const navigateTo = (tab: typeof activeTab) => {
+    if (tab !== 'explore' && !user) {
+      setIsSidebarOpen(false);
+      setIsAuthModalOpen(true);
+      addToast('info', 'Sign In Required', `Please sign in to access ${tab === 'tasks' ? 'your testing tasks' : tab === 'my-apps' ? 'your published apps' : 'the coins exchange'}.`);
+      return;
+    }
     setActiveTab(tab);
     setIsSidebarOpen(false);
+  };
+
+  const handleAddApp = () => {
+    setIsSidebarOpen(false);
+    if (!user) {
+      setIsAuthModalOpen(true);
+      addToast('info', 'Sign In Required', 'Please sign in or register to publish your app.');
+      return;
+    }
+    setIsAddAppModalOpen(true);
+  };
+
+  const handleReferralClick = () => {
+    setIsSidebarOpen(false);
+    if (!user) {
+      setIsAuthModalOpen(true);
+      addToast('info', 'Sign In Required', 'Please sign in to view your referral code and earn +50 Coins.');
+      return;
+    }
+    setIsReferralModalOpen(true);
   };
 
   return (
@@ -160,10 +187,7 @@ export const SidebarDrawer: React.FC = () => {
           {/* Quick Action */}
           <div className="p-3 border-b border-slate-100">
             <button
-              onClick={() => {
-                setIsSidebarOpen(false);
-                setIsAddAppModalOpen(true);
-              }}
+              onClick={handleAddApp}
               className="w-full flex items-center justify-center gap-2 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white py-2.5 px-3 text-xs font-bold shadow-xs transition-all active:scale-95"
             >
               <PlusCircle className="h-4 w-4" />
@@ -255,10 +279,7 @@ export const SidebarDrawer: React.FC = () => {
               </span>
               <div className="space-y-1">
                 <button
-                  onClick={() => {
-                    setIsSidebarOpen(false);
-                    setIsReferralModalOpen(true);
-                  }}
+                  onClick={handleReferralClick}
                   className="w-full flex items-center justify-between px-3 py-2.5 rounded-xl text-xs font-semibold text-slate-700 hover:bg-indigo-50/70 hover:text-indigo-900 transition-all border border-transparent hover:border-indigo-100"
                 >
                   <div className="flex items-center gap-2.5">

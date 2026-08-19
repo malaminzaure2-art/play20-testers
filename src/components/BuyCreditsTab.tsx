@@ -18,7 +18,7 @@ import { CREDIT_PACKAGES } from '../data/mockData';
 import { CreditPackage } from '../types';
 
 export const BuyCreditsTab: React.FC = () => {
-  const { user, buyCredits, addToast } = useApp();
+  const { user, buyCredits, addToast, setIsAuthModalOpen } = useApp();
   const [selectedPackageForCheckout, setSelectedPackageForCheckout] = useState<CreditPackage | null>(null);
   const [isProcessing, setIsProcessing] = useState(false);
   const [currency, setCurrency] = useState<'USD' | 'NGN'>('USD');
@@ -50,7 +50,8 @@ export const BuyCreditsTab: React.FC = () => {
 
   const handleOpenCheckout = (pkg: CreditPackage) => {
     if (!user) {
-      addToast('warning', 'Sign In Required', 'Please sign in or create an account to purchase testing credits.');
+      setIsAuthModalOpen(true);
+      addToast('info', 'Sign In Required', 'Please sign in or create an account to purchase testing credits.');
       return;
     }
     setSelectedPackageForCheckout(pkg);

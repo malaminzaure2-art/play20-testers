@@ -23,10 +23,29 @@ export const Navbar: React.FC = () => {
     setIsReferralModalOpen,
     setIsSidebarOpen,
     setIsAuthModalOpen,
+    addToast,
     tasks
   } = useApp();
 
   const activeTasksCount = tasks.filter((t) => t.status === 'active').length;
+
+  const handleProtectedTab = (tab: 'tasks' | 'my-apps' | 'store') => {
+    if (!user) {
+      setIsAuthModalOpen(true);
+      addToast('info', 'Sign In Required', `Please sign in to access ${tab === 'tasks' ? 'your testing tasks' : tab === 'my-apps' ? 'your published apps' : 'the coins exchange'}.`);
+      return;
+    }
+    setActiveTab(tab);
+  };
+
+  const handleInviteClick = () => {
+    if (!user) {
+      setIsAuthModalOpen(true);
+      addToast('info', 'Sign In Required', 'Please sign in to get your referral link and earn +50 Coins.');
+      return;
+    }
+    setIsReferralModalOpen(true);
+  };
 
   return (
     <header className="sticky top-0 z-40 w-full border-b border-slate-200 bg-white/95 backdrop-blur-md shadow-xs">
@@ -87,7 +106,7 @@ export const Navbar: React.FC = () => {
 
           <button
             id="nav-tab-tasks"
-            onClick={() => setActiveTab('tasks')}
+            onClick={() => handleProtectedTab('tasks')}
             className={`relative flex items-center gap-2 px-3.5 py-1.5 rounded-lg text-xs font-semibold transition-all ${
               activeTab === 'tasks'
                 ? 'bg-white text-indigo-700 shadow-xs border border-slate-200/80 font-bold'
@@ -105,7 +124,7 @@ export const Navbar: React.FC = () => {
 
           <button
             id="nav-tab-my-apps"
-            onClick={() => setActiveTab('my-apps')}
+            onClick={() => handleProtectedTab('my-apps')}
             className={`flex items-center gap-2 px-3.5 py-1.5 rounded-lg text-xs font-semibold transition-all ${
               activeTab === 'my-apps'
                 ? 'bg-white text-indigo-700 shadow-xs border border-slate-200/80 font-bold'
@@ -122,7 +141,7 @@ export const Navbar: React.FC = () => {
           
           {/* Invite & Earn Button (Desktop/Tablet) */}
           <button
-            onClick={() => setIsReferralModalOpen(true)}
+            onClick={handleInviteClick}
             className="hidden sm:flex items-center gap-1.5 rounded-xl border border-indigo-200 bg-indigo-50/80 hover:bg-indigo-100 text-indigo-700 px-2.5 sm:px-3 py-1.5 text-xs font-bold transition-all shadow-xs active:scale-95"
             title="Invite friends and get +50 free Coins"
           >
@@ -222,7 +241,7 @@ export const Navbar: React.FC = () => {
         </button>
 
         <button
-          onClick={() => setActiveTab('tasks')}
+          onClick={() => handleProtectedTab('tasks')}
           className={`relative flex flex-col items-center gap-0.5 py-1 px-3 rounded-xl transition-all active:scale-95 ${
             activeTab === 'tasks' 
               ? 'text-indigo-600 bg-indigo-50 font-bold' 
@@ -237,7 +256,7 @@ export const Navbar: React.FC = () => {
         </button>
 
         <button
-          onClick={() => setActiveTab('my-apps')}
+          onClick={() => handleProtectedTab('my-apps')}
           className={`flex flex-col items-center gap-0.5 py-1 px-3 rounded-xl transition-all active:scale-95 ${
             activeTab === 'my-apps' 
               ? 'text-indigo-600 bg-indigo-50 font-bold' 
