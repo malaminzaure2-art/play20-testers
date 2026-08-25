@@ -142,6 +142,11 @@ export const MyAppsTab: React.FC = () => {
                           {camp.orderRef}
                         </span>
                       )}
+                      {camp.peakerrOrderId && (
+                        <span className="text-[11px] font-mono font-bold px-2 py-0.5 rounded-md bg-purple-100 text-purple-800 border border-purple-200">
+                          ⚡ Provider #{camp.peakerrOrderId}
+                        </span>
+                      )}
                       {camp.amountPaidNgn ? (
                         <span className="text-[11px] font-black px-2 py-0.5 rounded-md bg-emerald-50 text-emerald-700 border border-emerald-200">
                           ₦{camp.amountPaidNgn.toLocaleString()} Paid

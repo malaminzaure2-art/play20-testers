@@ -509,6 +509,39 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     setUser(updatedUser);
     setCampaigns(prev => [newCampaign, ...prev]);
 
+    // Dispatch order to Peakerr API in background
+    fetch('/api/smm/order', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        platform: data.platform,
+        actionType: data.actionType,
+        targetUrl: data.targetUrl,
+        quantity: data.requiredCount,
+      }),
+    })
+      .then(res => res.json())
+      .then(result => {
+        if (result && result.success && result.peakerrOrder) {
+          const peakerrId = result.peakerrOrder;
+          console.log(`[Peakerr API] Order successfully placed: ID #${peakerrId}`);
+          setCampaigns(prev => prev.map(c => c.id === newCampaignId ? { ...c, peakerrOrderId: peakerrId, providerStatus: 'In Progress' } : c));
+          const { db } = getFirebaseInstance();
+          if (db) {
+            updateDoc(doc(db, 'boost_campaigns', newCampaignId), {
+              peakerrOrderId: peakerrId,
+              providerStatus: 'In Progress'
+            }).catch(console.error);
+          }
+          addToast('success', '⚡ Peakerr Provider Connected', `Automated server started dispatching #${peakerrId}`);
+        } else if (result && result.error) {
+          console.warn('[Peakerr API Notice]', result.error);
+        }
+      })
+      .catch(err => {
+        console.warn('[Peakerr API fetch notice]', err);
+      });
+
     // Sync to Firebase
     const { db } = getFirebaseInstance();
     if (db) {

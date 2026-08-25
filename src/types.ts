@@ -57,6 +57,8 @@ export interface BoostCampaign {
   paymentMethod?: 'cash_transfer' | 'cash_card' | 'whatsapp' | 'coins';
   amountPaidNgn?: number;
   orderRef?: string;
+  peakerrOrderId?: number | string;
+  providerStatus?: string;
 }
 
 export interface CompletedTask {
