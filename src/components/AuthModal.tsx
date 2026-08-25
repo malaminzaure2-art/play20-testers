@@ -8,7 +8,7 @@ import {
   Sparkles, 
   ShieldCheck, 
   CheckCircle2, 
-  Play,
+  TrendingUp,
   AlertCircle,
   Loader2
 } from 'lucide-react';
@@ -49,7 +49,7 @@ export const AuthModal: React.FC = () => {
         await signInWithEmail(email, password);
       } else {
         if (!displayName.trim()) {
-          setErrorMsg('Please enter your full name or developer handle');
+          setErrorMsg('Please enter your full name or channel name');
           setLoading(false);
           return;
         }
@@ -70,21 +70,21 @@ export const AuthModal: React.FC = () => {
       await signInWithGoogle();
       setIsAuthModalOpen(false);
     } catch (err: any) {
-      setErrorMsg(err.message || 'Could not complete Google sign-in.');
+      setErrorMsg(err.message || 'Unable to sign in with Google.');
     } finally {
       setGoogleLoading(false);
     }
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/60 backdrop-blur-sm p-4 overflow-y-auto">
-      <div className="relative w-full max-w-md rounded-3xl border border-slate-200 bg-white p-6 sm:p-8 shadow-2xl animate-in fade-in zoom-in-95 duration-200">
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/60 backdrop-blur-xs p-4 overflow-y-auto">
+      <div className="relative w-full max-w-md rounded-3xl border border-slate-200 bg-white p-6 sm:p-8 shadow-2xl animate-fadeIn">
         
         {/* Close Button */}
         <button
           onClick={closeModal}
           disabled={loading || googleLoading}
-          className="absolute top-5 right-5 rounded-full p-2 text-slate-400 hover:bg-slate-100 hover:text-slate-700 transition-colors disabled:opacity-40"
+          className="absolute top-5 right-5 rounded-full p-2 text-slate-400 hover:bg-slate-100 hover:text-slate-700 transition-colors disabled:opacity-40 cursor-pointer"
           title="Close"
         >
           <X className="h-5 w-5" />
@@ -92,16 +92,16 @@ export const AuthModal: React.FC = () => {
 
         {/* Brand Header */}
         <div className="text-center mb-6">
-          <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-2xl bg-indigo-600 text-white shadow-md shadow-indigo-200 mb-3">
-            <Play className="h-6 w-6 fill-white translate-x-0.5" />
+          <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-2xl bg-gradient-to-tr from-indigo-600 to-pink-500 text-white shadow-md mb-3">
+            <TrendingUp className="h-6 w-6" />
           </div>
           <h2 className="text-xl sm:text-2xl font-black text-slate-900">
-            {mode === 'signin' ? 'Welcome to Play20' : 'Create Developer Account'}
+            {mode === 'signin' ? 'Welcome Back!' : 'Create an Account'}
           </h2>
           <p className="text-xs text-slate-500 mt-1 font-medium">
             {mode === 'signin' 
-              ? 'Sign in to access your apps, tasks, and tester coins' 
-              : 'Join Android developer community for 14-day closed testing'}
+              ? 'Sign in to manage your TikTok, YouTube boosts and coin balances' 
+              : 'Join the premier organic social media boosting platform'}
           </p>
         </div>
 
@@ -114,7 +114,7 @@ export const AuthModal: React.FC = () => {
               setMode('signin');
               setErrorMsg(null);
             }}
-            className={`flex-1 py-2 text-xs font-bold rounded-xl transition-all ${
+            className={`flex-1 py-2 text-xs font-bold rounded-xl transition-all cursor-pointer ${
               mode === 'signin' 
                 ? 'bg-white text-indigo-700 shadow-xs' 
                 : 'text-slate-500 hover:text-slate-800'
@@ -129,30 +129,30 @@ export const AuthModal: React.FC = () => {
               setMode('signup');
               setErrorMsg(null);
             }}
-            className={`flex-1 py-2 text-xs font-bold rounded-xl transition-all ${
+            className={`flex-1 py-2 text-xs font-bold rounded-xl transition-all cursor-pointer ${
               mode === 'signup' 
                 ? 'bg-white text-indigo-700 shadow-xs' 
                 : 'text-slate-500 hover:text-slate-800'
             }`}
           >
-            Create Account
+            Sign Up
           </button>
         </div>
 
-        {/* Welcome Bonus Notice for New Developers */}
+        {/* Welcome Bonus Notice */}
         {mode === 'signup' && (
-          <div className="mb-4 flex items-center gap-2.5 rounded-2xl border border-amber-200 bg-amber-50/80 p-3 text-xs text-amber-900 animate-in fade-in">
+          <div className="mb-4 flex items-center gap-2.5 rounded-2xl border border-amber-200 bg-amber-50/80 p-3 text-xs text-amber-900 animate-fadeIn">
             <span className="text-base shrink-0">🎁</span>
             <div>
-              <strong className="block font-bold text-amber-950">110 Free Starter Coins Included!</strong>
-              <span className="text-[11px] text-amber-800">Receive 110 coins instantly upon registration to launch your 20-tester closed test immediately.</span>
+              <strong className="block font-bold text-amber-950">100 Free Starter Coins!</strong>
+              <span className="text-[11px] text-amber-800">You will instantly receive 100 free coins to launch your first promotion.</span>
             </div>
           </div>
         )}
 
         {/* Error Alert */}
         {errorMsg && (
-          <div className="mb-4 flex items-center gap-2 rounded-xl border border-rose-200 bg-rose-50 p-3 text-xs text-rose-700 animate-in fade-in">
+          <div className="mb-4 flex items-center gap-2 rounded-xl border border-rose-200 bg-rose-50 p-3 text-xs text-rose-700 animate-fadeIn">
             <AlertCircle className="h-4 w-4 shrink-0 text-rose-500" />
             <span>{errorMsg}</span>
           </div>
@@ -163,12 +163,12 @@ export const AuthModal: React.FC = () => {
           type="button"
           onClick={handleGoogleAuth}
           disabled={loading || googleLoading}
-          className="w-full flex items-center justify-center gap-3 rounded-2xl border border-slate-200 bg-white hover:bg-slate-50 text-slate-700 py-3 px-4 text-xs font-bold shadow-xs hover:border-slate-300 transition-all active:scale-[0.99] disabled:opacity-75 disabled:cursor-not-allowed"
+          className="w-full flex items-center justify-center gap-3 rounded-2xl border border-slate-200 bg-white hover:bg-slate-50 text-slate-700 py-3 px-4 text-xs font-bold shadow-xs hover:border-slate-300 transition-all cursor-pointer disabled:opacity-75"
         >
           {googleLoading ? (
             <>
               <Loader2 className="h-4 w-4 text-indigo-600 animate-spin" />
-              <span className="text-indigo-600 font-semibold">Connecting to Google...</span>
+              <span className="text-indigo-600 font-semibold">Connecting with Google...</span>
             </>
           ) : (
             <>
@@ -190,7 +190,7 @@ export const AuthModal: React.FC = () => {
                   d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.06l3.66 2.84c.87-2.6 3.3-4.52 6.16-4.52z"
                 />
               </svg>
-              <span>{mode === 'signin' ? 'Continue with Google' : 'Sign up with Google'}</span>
+              <span>Continue with Google</span>
             </>
           )}
         </button>
@@ -210,7 +210,7 @@ export const AuthModal: React.FC = () => {
           {mode === 'signup' && (
             <div>
               <label className="block text-[11px] font-bold text-slate-700 mb-1">
-                Full Name / Studio Name
+                Full Name / Channel Name
               </label>
               <div className="relative">
                 <UserIcon className="absolute left-3.5 top-3 h-4 w-4 text-slate-400" />
@@ -219,9 +219,9 @@ export const AuthModal: React.FC = () => {
                   required
                   value={displayName}
                   onChange={(e) => setDisplayName(e.target.value)}
-                  placeholder="e.g. John Doe or Pixel Studio"
+                  placeholder="e.g. Alex Johnson or Tech Channel"
                   disabled={loading || googleLoading}
-                  className="w-full rounded-xl border border-slate-200 bg-white pl-10 pr-3 py-2.5 text-xs text-slate-800 placeholder-slate-400 focus:border-indigo-600 focus:outline-none disabled:bg-slate-50"
+                  className="w-full rounded-xl border border-slate-200 bg-white pl-10 pr-3 py-2.5 text-xs text-slate-800 placeholder-slate-400 focus:border-indigo-600 focus:outline-hidden"
                 />
               </div>
             </div>
@@ -238,9 +238,9 @@ export const AuthModal: React.FC = () => {
                 required
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
-                placeholder="developer@gmail.com"
+                placeholder="you@example.com"
                 disabled={loading || googleLoading}
-                className="w-full rounded-xl border border-slate-200 bg-white pl-10 pr-3 py-2.5 text-xs text-slate-800 placeholder-slate-400 focus:border-indigo-600 focus:outline-none disabled:bg-slate-50"
+                className="w-full rounded-xl border border-slate-200 bg-white pl-10 pr-3 py-2.5 text-xs text-slate-800 placeholder-slate-400 focus:border-indigo-600 focus:outline-hidden"
               />
             </div>
           </div>
@@ -259,7 +259,7 @@ export const AuthModal: React.FC = () => {
                 placeholder="••••••••"
                 minLength={6}
                 disabled={loading || googleLoading}
-                className="w-full rounded-xl border border-slate-200 bg-white pl-10 pr-3 py-2.5 text-xs text-slate-800 placeholder-slate-400 focus:border-indigo-600 focus:outline-none disabled:bg-slate-50"
+                className="w-full rounded-xl border border-slate-200 bg-white pl-10 pr-3 py-2.5 text-xs text-slate-800 placeholder-slate-400 focus:border-indigo-600 focus:outline-hidden"
               />
             </div>
           </div>
@@ -267,16 +267,16 @@ export const AuthModal: React.FC = () => {
           <button
             type="submit"
             disabled={loading || googleLoading}
-            className="w-full flex items-center justify-center gap-2 rounded-2xl bg-indigo-600 hover:bg-indigo-700 text-white py-3 text-xs font-bold shadow-md shadow-indigo-200 transition-all active:scale-[0.99] disabled:opacity-75 disabled:cursor-not-allowed mt-2"
+            className="w-full flex items-center justify-center gap-2 rounded-2xl bg-indigo-600 hover:bg-indigo-700 text-white py-3 text-xs font-bold shadow-md shadow-indigo-200 transition-all cursor-pointer mt-2"
           >
             {loading ? (
               <>
                 <Loader2 className="h-4 w-4 animate-spin text-white" />
-                <span>{mode === 'signin' ? 'Signing in...' : 'Creating account...'}</span>
+                <span>Processing...</span>
               </>
             ) : (
               <>
-                <span>{mode === 'signin' ? 'Sign In' : 'Create Account'}</span>
+                <span>{mode === 'signin' ? 'Sign In' : 'Create Account & Claim 100 Coins'}</span>
                 <ArrowRight className="h-4 w-4" />
               </>
             )}
@@ -287,11 +287,11 @@ export const AuthModal: React.FC = () => {
         <div className="mt-5 pt-4 border-t border-slate-100 grid grid-cols-2 gap-2 text-[10px] text-slate-500 font-medium">
           <div className="flex items-center gap-1.5">
             <CheckCircle2 className="h-3.5 w-3.5 text-emerald-600 shrink-0" />
-            <span>Free 100 Starter Coins</span>
+            <span>100 Free Starter Coins</span>
           </div>
           <div className="flex items-center gap-1.5">
             <ShieldCheck className="h-3.5 w-3.5 text-indigo-600 shrink-0" />
-            <span>14-Day Streak Sync</span>
+            <span>100% Real Organic Users</span>
           </div>
         </div>
 

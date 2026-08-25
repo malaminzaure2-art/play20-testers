@@ -2,18 +2,19 @@ import React, { createContext, useContext, useState, useEffect } from 'react';
 import confetti from 'canvas-confetti';
 import { 
   UserProfile, 
-  AppListing, 
-  TestingTask, 
-  TestingFeedback, 
+  BoostCampaign, 
+  CompletedTask, 
+  SocialPlatform, 
+  BoostActionType, 
   ActiveTab, 
-  ToastMessage,
-  LeaderboardUser,
-  ReferralHistoryItem
+  ToastMessage, 
+  LeaderboardUser, 
+  ReferralHistoryItem, 
+  CreditPackage 
 } from '../types';
 import { 
   INITIAL_USER, 
-  INITIAL_APPS, 
-  INITIAL_TASKS, 
+  INITIAL_CAMPAIGNS, 
   CREDIT_PACKAGES, 
   MOCK_LEADERBOARD, 
   INITIAL_REFERRALS 
@@ -42,8 +43,8 @@ import {
 
 interface AppContextType {
   user: UserProfile | null;
-  apps: AppListing[];
-  tasks: TestingTask[];
+  campaigns: BoostCampaign[];
+  completedTasks: CompletedTask[];
   activeTab: ActiveTab;
   setActiveTab: (tab: ActiveTab) => void;
   signInWithGoogle: () => Promise<void>;
@@ -52,30 +53,30 @@ interface AppContextType {
   signOutUser: () => void;
   isAuthModalOpen: boolean;
   setIsAuthModalOpen: (open: boolean) => void;
-  joinAppTest: (app: AppListing) => boolean;
-  submitDailyProof: (
-    taskId: string, 
-    feedbackText: string, 
-    screenshotUrl: string, 
-    rating: number, 
-    deviceModel: string, 
-    androidVersion: string
-  ) => { success: boolean; message: string; coinsEarned?: number };
-  addNewApp: (appData: Omit<AppListing, 'id' | 'ownerId' | 'ownerName' | 'ownerEmail' | 'currentTesters' | 'createdAt' | 'active'>) => boolean;
-  editingApp: AppListing | null;
-  setEditingApp: (app: AppListing | null) => void;
-  updateApp: (
-    appId: string,
-    updatedFields: Partial<Pick<AppListing, 'title' | 'description' | 'iconUrl' | 'groupUrl' | 'storeWebUrl' | 'storeAndroidUrl' | 'category' | 'packageName'>>
-  ) => boolean;
-  deleteApp: (appId: string) => boolean;
+  
+  // Campaign Actions
+  createNewCampaign: (campaignData: Omit<BoostCampaign, 'id' | 'ownerId' | 'ownerName' | 'ownerEmail' | 'deliveredCount' | 'createdAt' | 'status' | 'active'>) => boolean;
+  editingCampaign: BoostCampaign | null;
+  setEditingCampaign: (camp: BoostCampaign | null) => void;
+  updateCampaign: (campaignId: string, fields: Partial<BoostCampaign>) => boolean;
+  toggleCampaignStatus: (campaignId: string) => boolean;
+  deleteCampaign: (campaignId: string) => boolean;
+  
+  // Task Execution Actions
+  selectedCampaignForTask: BoostCampaign | null;
+  setSelectedCampaignForTask: (camp: BoostCampaign | null) => void;
+  executeBoostTask: (campaign: BoostCampaign) => { success: boolean; message: string; coinsEarned?: number };
+  
+  // Daily Bonus & Rewards
+  canClaimDailyBonus: boolean;
+  claimDailyBonus: () => { success: boolean; coins: number };
+  
+  // Buy Coins
   buyCredits: (packageId: string) => void;
-  selectedTaskForProof: TestingTask | null;
-  setSelectedTaskForProof: (task: TestingTask | null) => void;
-  selectedAppToJoin: AppListing | null;
-  setSelectedAppToJoin: (app: AppListing | null) => void;
-  isAddAppModalOpen: boolean;
-  setIsAddAppModalOpen: (open: boolean) => void;
+  
+  // Modals & Navigation
+  isCreateCampaignModalOpen: boolean;
+  setIsCreateCampaignModalOpen: (open: boolean) => void;
   isDeployGuideOpen: boolean;
   setIsDeployGuideOpen: (open: boolean) => void;
   isFirebaseModalOpen: boolean;
@@ -86,43 +87,42 @@ interface AppContextType {
   setIsLeaderboardModalOpen: (open: boolean) => void;
   isSidebarOpen: boolean;
   setIsSidebarOpen: (open: boolean) => void;
-  legalModalType: 'privacy' | 'terms' | 'about' | 'contact' | 'adsense' | null;
-  setLegalModalType: (type: 'privacy' | 'terms' | 'about' | 'contact' | 'adsense' | null) => void;
+  legalModalType: 'privacy' | 'terms' | 'about' | 'contact' | 'safety' | null;
+  setLegalModalType: (type: 'privacy' | 'terms' | 'about' | 'contact' | 'safety' | null) => void;
+  
+  // Leaderboard & Referrals
   leaderboardUsers: LeaderboardUser[];
   referrals: ReferralHistoryItem[];
   copyReferralLink: () => void;
   claimReferralBonus: () => void;
+  
+  // Toast notifications
   toasts: ToastMessage[];
   addToast: (type: ToastMessage['type'], title: string, message: string) => void;
   removeToast: (id: string) => void;
+  
+  // Filters
   searchQuery: string;
   setSearchQuery: (query: string) => void;
-  selectedCategory: string;
-  setSelectedCategory: (cat: string) => void;
+  selectedPlatform: string;
+  setSelectedPlatform: (plat: string) => void;
+  selectedActionType: string;
+  setSelectedActionType: (action: string) => void;
 }
 
 const AppContext = createContext<AppContextType | undefined>(undefined);
 
 const STORAGE_KEYS = {
-  USER: 'play20_user_v2',
-  APPS: 'play20_apps_v2',
-  TASKS: 'play20_tasks_v2',
+  USER: 'trendboost_user_v3',
+  CAMPAIGNS: 'trendboost_campaigns_v3',
+  TASKS: 'trendboost_tasks_v3',
 };
 
-// Clear legacy v1 mock cache if present
-try {
-  localStorage.removeItem('play20_user_v1');
-  localStorage.removeItem('play20_apps_v1');
-  localStorage.removeItem('play20_tasks_v1');
-} catch (e) {
-  // ignore
-}
-
-// Helper to check if a task's daily proof was already submitted today (same calendar day)
-export const isTaskProofSubmittedToday = (task?: TestingTask | null): boolean => {
-  if (!task || !task.lastFeedbackDate) return false;
+// Check if daily bonus was claimed today
+export const isBonusClaimedToday = (lastClaimDate?: string): boolean => {
+  if (!lastClaimDate) return false;
   try {
-    const lastDate = new Date(task.lastFeedbackDate);
+    const lastDate = new Date(lastClaimDate);
     const now = new Date();
     return (
       lastDate.getFullYear() === now.getFullYear() &&
@@ -135,24 +135,28 @@ export const isTaskProofSubmittedToday = (task?: TestingTask | null): boolean =>
 };
 
 export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-  // Load initial state
+  // 1. Initial State
   const [user, setUser] = useState<UserProfile | null>(() => {
     const saved = localStorage.getItem(STORAGE_KEYS.USER);
     if (saved) {
       try { return JSON.parse(saved); } catch (e) { console.error(e); }
     }
+    // Default guest profile if none
     return null;
   });
 
-  const [apps, setApps] = useState<AppListing[]>(() => {
-    const saved = localStorage.getItem(STORAGE_KEYS.APPS);
+  const [campaigns, setCampaigns] = useState<BoostCampaign[]>(() => {
+    const saved = localStorage.getItem(STORAGE_KEYS.CAMPAIGNS);
     if (saved) {
-      try { return JSON.parse(saved); } catch (e) { console.error(e); }
+      try {
+        const parsed = JSON.parse(saved);
+        if (Array.isArray(parsed) && parsed.length > 0) return parsed;
+      } catch (e) { console.error(e); }
     }
-    return [];
+    return INITIAL_CAMPAIGNS;
   });
 
-  const [tasks, setTasks] = useState<TestingTask[]>(() => {
+  const [completedTasks, setCompletedTasks] = useState<CompletedTask[]>(() => {
     const saved = localStorage.getItem(STORAGE_KEYS.TASKS);
     if (saved) {
       try { return JSON.parse(saved); } catch (e) { console.error(e); }
@@ -161,27 +165,40 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   });
 
   const [activeTab, setActiveTab] = useState<ActiveTab>('explore');
+  const [isAuthModalOpen, setIsAuthModalOpen] = useState(false);
+  const [isCreateCampaignModalOpen, setIsCreateCampaignModalOpen] = useState(false);
+  const [editingCampaign, setEditingCampaign] = useState<BoostCampaign | null>(null);
+  const [selectedCampaignForTask, setSelectedCampaignForTask] = useState<BoostCampaign | null>(null);
+  const [isDeployGuideOpen, setIsDeployGuideOpen] = useState(false);
+  const [isFirebaseModalOpen, setIsFirebaseModalOpen] = useState(false);
+  const [isReferralModalOpen, setIsReferralModalOpen] = useState(false);
+  const [isLeaderboardModalOpen, setIsLeaderboardModalOpen] = useState(false);
+  const [isSidebarOpen, setIsSidebarOpen] = useState(false);
+  const [legalModalType, setLegalModalType] = useState<'privacy' | 'terms' | 'about' | 'contact' | 'safety' | null>(null);
   const [toasts, setToasts] = useState<ToastMessage[]>([]);
-  const [searchQuery, setSearchQuery] = useState<string>('');
-  const [selectedCategory, setSelectedCategory] = useState<string>('All');
 
-  // Modals state
-  const [editingApp, setEditingApp] = useState<AppListing | null>(null);
-  const [selectedTaskForProof, setSelectedTaskForProof] = useState<TestingTask | null>(null);
-  const [selectedAppToJoin, setSelectedAppToJoin] = useState<AppListing | null>(null);
-  const [isAddAppModalOpen, setIsAddAppModalOpen] = useState<boolean>(false);
-  const [isDeployGuideOpen, setIsDeployGuideOpen] = useState<boolean>(false);
-  const [isFirebaseModalOpen, setIsFirebaseModalOpen] = useState<boolean>(false);
-  const [isReferralModalOpen, setIsReferralModalOpen] = useState<boolean>(false);
-  const [isLeaderboardModalOpen, setIsLeaderboardModalOpen] = useState<boolean>(false);
-  const [isSidebarOpen, setIsSidebarOpen] = useState<boolean>(false);
-  const [isAuthModalOpen, setIsAuthModalOpen] = useState<boolean>(false);
-  const [legalModalType, setLegalModalType] = useState<'privacy' | 'terms' | 'about' | 'contact' | 'adsense' | null>(null);
+  // Search & Filtering
+  const [searchQuery, setSearchQuery] = useState('');
+  const [selectedPlatform, setSelectedPlatform] = useState('all');
+  const [selectedActionType, setSelectedActionType] = useState('all');
 
-  const [leaderboardUsers, setLeaderboardUsers] = useState<LeaderboardUser[]>([]);
+  const [leaderboardUsers, setLeaderboardUsers] = useState<LeaderboardUser[]>(MOCK_LEADERBOARD);
   const [referrals, setReferrals] = useState<ReferralHistoryItem[]>(INITIAL_REFERRALS);
 
-  // Sync to localStorage
+  // Helper: Toasts
+  const addToast = (type: ToastMessage['type'], title: string, message: string) => {
+    const id = `toast-${Date.now()}-${Math.random().toString(36).substr(2, 5)}`;
+    setToasts(prev => [...prev, { id, type, title, message }]);
+    setTimeout(() => {
+      removeToast(id);
+    }, 4500);
+  };
+
+  const removeToast = (id: string) => {
+    setToasts(prev => prev.filter(t => t.id !== id));
+  };
+
+  // Sync to LocalStorage
   useEffect(() => {
     if (user) {
       localStorage.setItem(STORAGE_KEYS.USER, JSON.stringify(user));
@@ -191,854 +208,570 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   }, [user]);
 
   useEffect(() => {
-    localStorage.setItem(STORAGE_KEYS.APPS, JSON.stringify(apps));
-  }, [apps]);
+    localStorage.setItem(STORAGE_KEYS.CAMPAIGNS, JSON.stringify(campaigns));
+  }, [campaigns]);
 
   useEffect(() => {
-    localStorage.setItem(STORAGE_KEYS.TASKS, JSON.stringify(tasks));
-  }, [tasks]);
+    localStorage.setItem(STORAGE_KEYS.TASKS, JSON.stringify(completedTasks));
+  }, [completedTasks]);
 
-  // 1. REAL-TIME FIRESTORE APPS LISTENER (Syncs all uploaded apps across all devices)
+  // Firebase Auth & Firestore Sync
   useEffect(() => {
-    const fb = getFirebaseInstance();
-    if (!fb || !fb.db) return;
+    const { auth, db } = getFirebaseInstance();
+    if (!auth || !db) return;
 
-    try {
-      const appsCollectionRef = collection(fb.db, 'apps');
-      const unsubscribe = onSnapshot(appsCollectionRef, (snapshot) => {
-        const firestoreApps: AppListing[] = [];
-        snapshot.forEach((docSnap) => {
-          const data = docSnap.data() as AppListing;
-          firestoreApps.push({
-            ...data,
-            id: docSnap.id,
-          });
-        });
-        setApps(firestoreApps);
-      }, (err) => {
-        console.warn('Firestore apps subscription notice:', err.message);
-      });
+    // Listen to Firebase Auth state
+    const unsubscribeAuth = onAuthStateChanged(auth, async (firebaseUser) => {
+      if (firebaseUser) {
+        try {
+          const userDocRef = doc(db, 'trendboost_users', firebaseUser.uid);
+          const userDocSnap = await getDoc(userDocRef);
 
-      return () => unsubscribe();
-    } catch (err) {
-      console.warn('Could not attach Firestore apps listener:', err);
-    }
-  }, []);
-
-  // 2. REAL-TIME AUTH STATE & CLOUD PROFILE SYNC
-  useEffect(() => {
-    const fb = getFirebaseInstance();
-    if (!fb || !fb.auth) return;
-
-    const unsubscribe = onAuthStateChanged(fb.auth, async (fbUser) => {
-      if (fbUser) {
-        // User is logged in with Firebase Auth
-        let profile: UserProfile = {
-          ...INITIAL_USER,
-          uid: fbUser.uid,
-          displayName: fbUser.displayName || fbUser.email?.split('@')[0] || 'Developer',
-          email: fbUser.email || 'developer@play20.app',
-          photoURL: fbUser.photoURL || undefined,
-        };
-
-        // Try reading user profile from Firestore
-        if (fb.db) {
-          try {
-            const userDocRef = doc(fb.db, 'users', fbUser.uid);
-            const userDocSnap = await getDoc(userDocRef);
-            if (userDocSnap.exists()) {
-              const cloudData = userDocSnap.data();
-              profile = {
-                ...profile,
-                ...cloudData,
-                uid: fbUser.uid,
-              };
-            } else {
-              // First time login: create initial profile in Firestore with 110 starter coins
-              profile.credits = 110;
-              await setDoc(userDocRef, profile);
-            }
-          } catch (e) {
-            console.warn('Firestore user fetch notice:', e);
+          if (userDocSnap.exists()) {
+            const data = userDocSnap.data() as UserProfile;
+            setUser(data);
+          } else {
+            // Initialize new user profile
+            const newUser: UserProfile = {
+              uid: firebaseUser.uid,
+              email: firebaseUser.email || 'booster@trendboost.app',
+              displayName: firebaseUser.displayName || 'Digital Creator',
+              photoURL: firebaseUser.photoURL || `https://api.dicebear.com/7.x/bottts/svg?seed=${firebaseUser.uid}`,
+              credits: 100, // 100 free welcome coins!
+              joinedAt: new Date().toISOString(),
+              role: 'user',
+              campaignsCreatedCount: 0,
+              tasksCompletedCount: 0,
+              dailyStreak: 1,
+              referralCode: `TB-${Math.random().toString(36).substring(2, 7).toUpperCase()}`,
+              referralsCount: 0,
+              referralEarnings: 0,
+              boosterTier: 'Bronze',
+            };
+            await setDoc(userDocRef, newUser);
+            setUser(newUser);
+            addToast('success', 'Welcome!', 'You received 100 Free Welcome Coins to start boosting!');
           }
+        } catch (err) {
+          console.error('Error fetching user profile from Firestore:', err);
         }
-
-        setUser(profile);
       }
     });
 
-    return () => unsubscribe();
+    // Listen to live Campaigns
+    let unsubscribeCampaigns = () => {};
+    try {
+      const campaignsQuery = collection(db, 'boost_campaigns');
+      unsubscribeCampaigns = onSnapshot(
+        campaignsQuery, 
+        (snapshot) => {
+          if (!snapshot.empty) {
+            const loadedCampaigns: BoostCampaign[] = [];
+            snapshot.forEach((doc) => {
+              loadedCampaigns.push({ id: doc.id, ...doc.data() } as BoostCampaign);
+            });
+            setCampaigns(loadedCampaigns);
+          }
+        }, 
+        (_err) => {
+          // Gracefully operate in offline/local storage mode without interruption
+        }
+      );
+    } catch (_err) {
+      // Silent offline mode fallback
+    }
+
+    return () => {
+      unsubscribeAuth();
+      unsubscribeCampaigns();
+    };
   }, []);
 
-  // 3. REAL-TIME TASKS SYNC FOR CURRENT USER
-  useEffect(() => {
-    const fb = getFirebaseInstance();
-    if (!fb || !fb.db || !user || !user.uid) return;
-
-    try {
-      const tasksQuery = query(collection(fb.db, 'tasks'), where('userId', '==', user.uid));
-      const unsubscribe = onSnapshot(tasksQuery, (snapshot) => {
-        if (!snapshot.empty) {
-          const cloudTasks: TestingTask[] = [];
-          snapshot.forEach((d) => {
-            cloudTasks.push({ ...(d.data() as TestingTask), id: d.id });
-          });
-          setTasks(cloudTasks);
-        }
-      }, (err) => {
-        console.warn('Firestore tasks subscription notice:', err.message);
-      });
-
-      return () => unsubscribe();
-    } catch (err) {
-      console.warn('Could not attach Firestore tasks listener:', err);
-    }
-  }, [user?.uid]);
-
-  // 4. REAL-TIME LEADERBOARD USERS SYNC FROM FIRESTORE
-  useEffect(() => {
-    const fb = getFirebaseInstance();
-    if (!fb || !fb.db) return;
-
-    try {
-      const usersCollection = collection(fb.db, 'users');
-      const unsubscribe = onSnapshot(usersCollection, (snapshot) => {
-        if (!snapshot.empty) {
-          const realUsers: UserProfile[] = [];
-          snapshot.forEach((d) => {
-            realUsers.push({ ...(d.data() as UserProfile), uid: d.id });
-          });
-
-          // Sort users by completed tests and credits
-          realUsers.sort((a, b) => (b.completedFullTests || b.appsTestedCount || 0) - (a.completedFullTests || a.appsTestedCount || 0) || (b.credits || 0) - (a.credits || 0));
-
-          const ranked: LeaderboardUser[] = realUsers.slice(0, 20).map((u, index) => ({
-            rank: index + 1,
-            uid: u.uid,
-            displayName: u.displayName || 'Developer',
-            photoURL: u.photoURL || '',
-            completedTests: u.completedFullTests || u.appsTestedCount || 0,
-            dailyStreak: u.dailyStreak || 1,
-            totalCoinsEarned: u.credits || 0,
-            badge: index === 0 ? 'Top Tester ⭐' : index === 1 ? 'Elite Dev 🚀' : 'Verified Tester 🛡️',
-          }));
-
-          setLeaderboardUsers(ranked);
-        }
-      }, (err) => {
-        console.warn('Leaderboard sync notice:', err.message);
-      });
-
-      return () => unsubscribe();
-    } catch (e) {
-      console.warn('Leaderboard fetch notice:', e);
-    }
-  }, []);
-
-  const addToast = (type: ToastMessage['type'], title: string, message: string) => {
-    const id = 'toast_' + Date.now() + Math.random().toString(36).substring(2, 6);
-    setToasts((prev) => [...prev, { id, type, title, message }]);
-    setTimeout(() => {
-      removeToast(id);
-    }, 4500);
-  };
-
-  const removeToast = (id: string) => {
-    setToasts((prev) => prev.filter((t) => t.id !== id));
-  };
-
-  const fireConfetti = () => {
-    try {
-      confetti({
-        particleCount: 80,
-        spread: 70,
-        origin: { y: 0.6 },
-        colors: ['#34A853', '#4285F4', '#FBBC05', '#EA4335'],
-      });
-    } catch (e) {
-      // safe fallback
-    }
-  };
-
-  const createDefaultUserProfile = (uid: string, displayName: string, email: string, photoURL?: string): UserProfile => ({
-    uid,
-    email,
-    displayName: displayName || 'Android Developer',
-    photoURL,
-    credits: 110, // 110 starter coins (enough to launch first 20-tester app immediately + 10 bonus)
-    joinedAt: new Date().toISOString(),
-    role: 'developer',
-    appsSubmittedCount: 0,
-    appsTestedCount: 0,
-    dailyStreak: 1,
-    referralCode: (displayName.replace(/[^a-zA-Z0-9]/g, '').slice(0, 4) || 'DEV') + Math.floor(1000 + Math.random() * 9000),
-    referralsCount: 0,
-    referralEarnings: 0,
-    testerRank: 'Bronze',
-    completedFullTests: 0,
-  });
-
-  // Google Sign-In with real Firebase Auth
+  // Firebase Auth Methods
   const signInWithGoogle = async () => {
-    const fb = getFirebaseInstance();
-    if (!fb || !fb.auth || !fb.googleProvider) {
-      throw new Error('Firebase Authentication is not ready. Please try Email login or check connection.');
+    const { auth, googleProvider, db } = getFirebaseInstance();
+    if (!auth || !googleProvider) {
+      // Demo / offline fallback
+      const demoUser: UserProfile = {
+        uid: 'demo-' + Date.now(),
+        email: 'creator@demo.com',
+        displayName: 'Demo Creator',
+        photoURL: 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=100&auto=format&fit=crop&q=80',
+        credits: 250,
+        joinedAt: new Date().toISOString(),
+        role: 'user',
+        campaignsCreatedCount: 1,
+        tasksCompletedCount: 4,
+        dailyStreak: 3,
+        referralCode: 'TB-DEMO1',
+        referralsCount: 2,
+        referralEarnings: 60,
+        boosterTier: 'Silver',
+      };
+      setUser(demoUser);
+      setIsAuthModalOpen(false);
+      addToast('success', 'Signed In Successfully', 'Logged in as Demo Creator!');
+      return;
     }
-    
+
     try {
-      const res = await signInWithPopup(fb.auth, fb.googleProvider);
-      if (res.user) {
-        let loggedUser = createDefaultUserProfile(
-          res.user.uid,
-          res.user.displayName || res.user.email?.split('@')[0] || 'Google Developer',
-          res.user.email || 'developer@play20.app',
-          res.user.photoURL || undefined
-        );
-
-        // Sync with Firestore
-        if (fb.db) {
-          try {
-            const uRef = doc(fb.db, 'users', res.user.uid);
-            const uSnap = await getDoc(uRef);
-            if (uSnap.exists()) {
-              loggedUser = { ...loggedUser, ...uSnap.data(), uid: res.user.uid };
-            } else {
-              await setDoc(uRef, loggedUser);
-            }
-          } catch (dbErr) {
-            console.warn('Firestore user doc sync notice:', dbErr);
-          }
+      const result = await signInWithPopup(auth, googleProvider);
+      const fbUser = result.user;
+      if (db) {
+        const userDocRef = doc(db, 'trendboost_users', fbUser.uid);
+        const userSnap = await getDoc(userDocRef);
+        if (!userSnap.exists()) {
+          const newUser: UserProfile = {
+            uid: fbUser.uid,
+            email: fbUser.email || '',
+            displayName: fbUser.displayName || 'Trend Booster',
+            photoURL: fbUser.photoURL || undefined,
+            credits: 100, // 100 free coins on signup
+            joinedAt: new Date().toISOString(),
+            role: 'user',
+            campaignsCreatedCount: 0,
+            tasksCompletedCount: 0,
+            dailyStreak: 1,
+            referralCode: `TB-${Math.random().toString(36).substring(2, 7).toUpperCase()}`,
+            referralsCount: 0,
+            referralEarnings: 0,
+            boosterTier: 'Bronze',
+          };
+          await setDoc(userDocRef, newUser);
+          setUser(newUser);
         }
-
-        setUser(loggedUser);
-        addToast('success', 'Signed In Successfully', `Welcome, ${loggedUser.displayName}!`);
       }
-    } catch (popupErr: any) {
-      console.error('Firebase Google popup error:', popupErr);
-      if (popupErr.code === 'auth/unauthorized-domain') {
-        const currentHost = typeof window !== 'undefined' ? window.location.hostname : 'domain';
-        throw new Error(`Google sign-in domain not authorized yet for "${currentHost}". Please use Email/Password sign-in below, or add "${currentHost}" in Firebase Console -> Authentication -> Settings -> Authorized Domains.`);
-      } else if (popupErr.code === 'auth/popup-closed-by-user') {
-        throw new Error('Sign-in popup was closed before completing. Please try again.');
-      } else if (popupErr.code === 'auth/popup-blocked') {
-        throw new Error('Popup was blocked by your browser. Please allow popups or use Email sign in.');
-      } else {
-        throw new Error(popupErr.message || 'Could not complete Google sign-in.');
-      }
+      setIsAuthModalOpen(false);
+      addToast('success', 'Welcome!', `Welcome back, ${fbUser.displayName || 'Creator'}!`);
+    } catch (err: any) {
+      console.error('Google Sign In Error:', err);
+      addToast('error', 'Sign In Error', err.message || 'Failed to sign in with Google.');
     }
   };
 
-  // Email & Password Sign-In
   const signInWithEmail = async (email: string, pass: string) => {
-    const fb = getFirebaseInstance();
-    if (!fb || !fb.auth) {
-      throw new Error('Firebase Authentication is not available.');
+    const { auth } = getFirebaseInstance();
+    if (!auth) {
+      const demoUser: UserProfile = {
+        uid: 'user-' + Date.now(),
+        email: email,
+        displayName: email.split('@')[0],
+        credits: 150,
+        joinedAt: new Date().toISOString(),
+        role: 'user',
+        campaignsCreatedCount: 0,
+        tasksCompletedCount: 0,
+        dailyStreak: 1,
+        referralCode: `TB-${Math.random().toString(36).substring(2, 7).toUpperCase()}`,
+        referralsCount: 0,
+        referralEarnings: 0,
+        boosterTier: 'Bronze',
+      };
+      setUser(demoUser);
+      setIsAuthModalOpen(false);
+      addToast('success', 'Signed In Successfully', 'Logged in to your account.');
+      return;
     }
-
     try {
-      const res = await signInWithEmailAndPassword(fb.auth, email.trim(), pass);
-      if (res.user) {
-        let loggedUser = createDefaultUserProfile(
-          res.user.uid,
-          res.user.displayName || email.split('@')[0],
-          res.user.email || email,
-          res.user.photoURL || undefined
-        );
-
-        if (fb.db) {
-          try {
-            const uRef = doc(fb.db, 'users', res.user.uid);
-            const uSnap = await getDoc(uRef);
-            if (uSnap.exists()) {
-              loggedUser = { ...loggedUser, ...uSnap.data(), uid: res.user.uid };
-            } else {
-              await setDoc(uRef, loggedUser);
-            }
-          } catch (dbErr) {
-            console.warn('Firestore user doc sync notice:', dbErr);
-          }
-        }
-
-        setUser(loggedUser);
-        addToast('success', 'Signed In', `Welcome back, ${loggedUser.displayName}!`);
-      }
-    } catch (authErr: any) {
-      console.error('Firebase email signin error:', authErr);
-      if (authErr.code === 'auth/invalid-credential' || authErr.code === 'auth/user-not-found' || authErr.code === 'auth/wrong-password') {
-        throw new Error('Invalid email or password. If you are new, click "Create Account".');
-      } else if (authErr.code === 'auth/invalid-email') {
-        throw new Error('Please enter a valid email address.');
-      } else {
-        throw new Error(authErr.message || 'Sign in failed. Please try again.');
-      }
+      await signInWithEmailAndPassword(auth, email, pass);
+      setIsAuthModalOpen(false);
+      addToast('success', 'Signed In Successfully', 'Welcome back to TrendBoost!');
+    } catch (err: any) {
+      throw new Error(err.message || 'Unable to sign in. Please verify credentials.');
     }
   };
 
-  // Email & Password Registration
   const signUpWithEmail = async (email: string, pass: string, name: string) => {
-    const fb = getFirebaseInstance();
-    if (!fb || !fb.auth) {
-      throw new Error('Firebase Authentication is not available.');
+    const { auth, db } = getFirebaseInstance();
+    if (!auth) {
+      const demoUser: UserProfile = {
+        uid: 'user-' + Date.now(),
+        email: email,
+        displayName: name,
+        credits: 100,
+        joinedAt: new Date().toISOString(),
+        role: 'user',
+        campaignsCreatedCount: 0,
+        tasksCompletedCount: 0,
+        dailyStreak: 1,
+        referralCode: `TB-${Math.random().toString(36).substring(2, 7).toUpperCase()}`,
+        referralsCount: 0,
+        referralEarnings: 0,
+        boosterTier: 'Bronze',
+      };
+      setUser(demoUser);
+      setIsAuthModalOpen(false);
+      addToast('success', 'Account Created', 'Account created with 100 Free Bonus Coins!');
+      return;
     }
-
     try {
-      const res = await createUserWithEmailAndPassword(fb.auth, email.trim(), pass);
+      const res = await createUserWithEmailAndPassword(auth, email, pass);
       if (res.user) {
-        try {
-          await updateProfile(res.user, { displayName: name.trim() });
-        } catch (e) {
-          console.warn('Profile update notice:', e);
+        await updateProfile(res.user, { displayName: name });
+        if (db) {
+          const newUser: UserProfile = {
+            uid: res.user.uid,
+            email: email,
+            displayName: name,
+            credits: 100,
+            joinedAt: new Date().toISOString(),
+            role: 'user',
+            campaignsCreatedCount: 0,
+            tasksCompletedCount: 0,
+            dailyStreak: 1,
+            referralCode: `TB-${Math.random().toString(36).substring(2, 7).toUpperCase()}`,
+            referralsCount: 0,
+            referralEarnings: 0,
+            boosterTier: 'Bronze',
+          };
+          await setDoc(doc(db, 'trendboost_users', res.user.uid), newUser);
+          setUser(newUser);
         }
-
-        const loggedUser = createDefaultUserProfile(
-          res.user.uid,
-          name.trim(),
-          email.trim()
-        );
-
-        if (fb.db) {
-          try {
-            await setDoc(doc(fb.db, 'users', res.user.uid), loggedUser);
-          } catch (dbErr) {
-            console.warn('Firestore user create notice:', dbErr);
-          }
-        }
-
-        setUser(loggedUser);
-        fireConfetti();
-        addToast('success', 'Account Created! 🎉', `Welcome to Play20, ${name.trim()}! +100 Starter Coins added.`);
       }
-    } catch (signupErr: any) {
-      console.error('Firebase email signup error:', signupErr);
-      if (signupErr.code === 'auth/email-already-in-use') {
-        throw new Error('This email is already registered. Please click "Sign In" instead.');
-      } else if (signupErr.code === 'auth/weak-password') {
-        throw new Error('Password must be at least 6 characters.');
-      } else if (signupErr.code === 'auth/invalid-email') {
-        throw new Error('Please enter a valid email address.');
-      } else {
-        throw new Error(signupErr.message || 'Account registration failed. Please try again.');
-      }
+      setIsAuthModalOpen(false);
+      addToast('success', 'Account Created!', 'Welcome to TrendBoost! 100 Welcome Coins added.');
+    } catch (err: any) {
+      throw new Error(err.message || 'Failed to create account.');
     }
   };
 
   const signOutUser = () => {
-    const fb = getFirebaseInstance();
-    if (fb && fb.auth) {
-      signOut(fb.auth).catch(() => {});
+    const { auth } = getFirebaseInstance();
+    if (auth) {
+      signOut(auth).catch(console.error);
     }
     setUser(null);
-    addToast('info', 'Signed Out', 'You have been safely signed out.');
+    localStorage.removeItem(STORAGE_KEYS.USER);
+    addToast('info', 'Signed Out', 'You have been logged out successfully.');
   };
 
-  // Join testing task for an app
-  const joinAppTest = (app: AppListing): boolean => {
+  // 2. Create Campaign (Boosting Request / Direct Order)
+  const createNewCampaign = (
+    data: Omit<BoostCampaign, 'id' | 'ownerId' | 'ownerName' | 'ownerEmail' | 'deliveredCount' | 'createdAt' | 'status' | 'active'>
+  ): boolean => {
+    // If guest, auto-create a user profile so they are not blocked
+    let currentUser = user;
+    if (!currentUser) {
+      const guestId = `guest-${Date.now()}`;
+      currentUser = {
+        uid: guestId,
+        email: 'customer@trendboost.app',
+        displayName: 'Valued Customer',
+        credits: 100,
+        joinedAt: new Date().toISOString(),
+        role: 'user',
+        campaignsCreatedCount: 0,
+        tasksCompletedCount: 0,
+        dailyStreak: 1,
+        referralCode: `TB-${Math.random().toString(36).substring(2, 7).toUpperCase()}`,
+        referralsCount: 0,
+        referralEarnings: 0,
+        boosterTier: 'Bronze',
+      };
+      setUser(currentUser);
+    }
+
+    const isPaidWithCash = data.paymentMethod && data.paymentMethod !== 'coins';
+    const totalCoinCost = data.requiredCount * (data.rewardPerAction || 10);
+
+    if (!isPaidWithCash && currentUser.credits < totalCoinCost) {
+      addToast('error', 'Insufficient Coins', `You have ${currentUser.credits} Coins, but ${totalCoinCost} Coins are required. Choose Card/Transfer/WhatsApp or buy coins.`);
+      return false;
+    }
+
+    const orderRef = `TB-${data.platform.substring(0, 2).toUpperCase()}-${Date.now().toString().slice(-6)}`;
+    const newCampaignId = `camp-${data.platform}-${Date.now()}`;
+    const newCampaign: BoostCampaign = {
+      ...data,
+      id: newCampaignId,
+      ownerId: currentUser.uid,
+      ownerName: currentUser.displayName,
+      ownerEmail: currentUser.email,
+      deliveredCount: 0,
+      active: true,
+      status: 'running',
+      createdAt: new Date().toISOString(),
+      orderRef,
+    };
+
+    // Deduct coins only if paid with coins
+    let updatedCredits = currentUser.credits;
+    if (!isPaidWithCash) {
+      updatedCredits = Math.max(0, currentUser.credits - totalCoinCost);
+    }
+
+    const updatedUser: UserProfile = {
+      ...currentUser,
+      credits: updatedCredits,
+      campaignsCreatedCount: (currentUser.campaignsCreatedCount || 0) + 1,
+    };
+
+    setUser(updatedUser);
+    setCampaigns(prev => [newCampaign, ...prev]);
+
+    // Sync to Firebase
+    const { db } = getFirebaseInstance();
+    if (db) {
+      setDoc(doc(db, 'boost_campaigns', newCampaignId), newCampaign).catch(console.error);
+      updateDoc(doc(db, 'trendboost_users', currentUser.uid), {
+        credits: updatedCredits,
+        campaignsCreatedCount: increment(1)
+      }).catch(console.error);
+    }
+
+    setIsCreateCampaignModalOpen(false);
+    confetti({ particleCount: 100, spread: 80, origin: { y: 0.6 } });
+    
+    if (isPaidWithCash) {
+      addToast('success', 'Order Activated! 🚀', `Your ${data.platform.toUpperCase()} promotion (${data.requiredCount.toLocaleString()} ${data.actionType}) is now live. Ref: ${orderRef}`);
+    } else {
+      addToast('success', 'Campaign Created! 🚀', `Your ${data.platform.toUpperCase()} boost campaign is now live! Deducted ${totalCoinCost} Coins.`);
+    }
+    
+    setActiveTab('campaigns');
+    return true;
+  };
+
+  // Edit Campaign
+  const updateCampaign = (campaignId: string, fields: Partial<BoostCampaign>): boolean => {
+    setCampaigns(prev => prev.map(c => c.id === campaignId ? { ...c, ...fields } : c));
+    const { db } = getFirebaseInstance();
+    if (db) {
+      updateDoc(doc(db, 'boost_campaigns', campaignId), fields).catch(console.error);
+    }
+    setEditingCampaign(null);
+    addToast('success', 'Updated Successfully', 'Campaign settings and details have been updated.');
+    return true;
+  };
+
+  // Pause / Resume Campaign
+  const toggleCampaignStatus = (campaignId: string): boolean => {
+    const target = campaigns.find(c => c.id === campaignId);
+    if (!target) return false;
+    const newStatus = target.status === 'running' ? 'paused' : 'running';
+    const newActive = newStatus === 'running';
+
+    setCampaigns(prev => prev.map(c => c.id === campaignId ? { ...c, status: newStatus, active: newActive } : c));
+    const { db } = getFirebaseInstance();
+    if (db) {
+      updateDoc(doc(db, 'boost_campaigns', campaignId), { status: newStatus, active: newActive }).catch(console.error);
+    }
+    addToast('info', newStatus === 'running' ? 'Campaign Resumed' : 'Campaign Paused', `Campaign "${target.title}" is now ${newStatus === 'running' ? 'active' : 'paused'}.`);
+    return true;
+  };
+
+  // Delete Campaign with Coins Refund
+  const deleteCampaign = (campaignId: string): boolean => {
+    const target = campaigns.find(c => c.id === campaignId);
+    if (!target) return false;
+
+    // Refund remaining undelivered coins
+    const remainingCount = Math.max(0, target.requiredCount - target.deliveredCount);
+    const refundAmount = remainingCount * target.rewardPerAction;
+
+    setCampaigns(prev => prev.filter(c => c.id !== campaignId));
+
+    if (user && user.uid === target.ownerId && refundAmount > 0) {
+      const newCredits = user.credits + refundAmount;
+      const updatedUser = { ...user, credits: newCredits };
+      setUser(updatedUser);
+
+      const { db } = getFirebaseInstance();
+      if (db) {
+        updateDoc(doc(db, 'trendboost_users', user.uid), {
+          credits: newCredits
+        }).catch(console.error);
+      }
+      addToast('info', 'Deleted & Refunded', `Campaign deleted. Refunded ${refundAmount} unspent Coins back to your wallet.`);
+    } else {
+      addToast('info', 'Campaign Deleted', 'The campaign was removed from the active queue.');
+    }
+
+    const { db } = getFirebaseInstance();
+    if (db) {
+      deleteDoc(doc(db, 'boost_campaigns', campaignId)).catch(console.error);
+    }
+    return true;
+  };
+
+  // 3. Execute / Complete Boost Task (Earn Coins)
+  const executeBoostTask = (campaign: BoostCampaign): { success: boolean; message: string; coinsEarned?: number } => {
     if (!user) {
       setIsAuthModalOpen(true);
-      addToast('info', 'Sign In Required', 'Please sign in or create an account to start testing apps and earning coins.');
-      return false;
+      return { success: false, message: 'Please sign in first to perform tasks.' };
     }
 
-    if (app.ownerId === user.uid) {
-      addToast('error', 'Action Restricted', 'You cannot test your own published application.');
-      return false;
+    // Check if user is trying to do their own campaign
+    if (user.uid === campaign.ownerId) {
+      return { success: false, message: 'You cannot complete your own campaign tasks.' };
     }
 
-    const alreadyJoined = tasks.some((t) => t.appId === app.id && t.userId === user.uid);
-    if (alreadyJoined) {
-      addToast('info', 'Already Joined', 'You are already an active tester for this app. Check "My Tasks".');
-      setActiveTab('tasks');
-      return false;
+    // Check if already completed
+    const alreadyDone = completedTasks.some(t => t.userId === user.uid && t.campaignId === campaign.id);
+    if (alreadyDone) {
+      return { success: false, message: 'You have already completed this task!' };
     }
 
-    if (app.currentTesters >= app.requiredTesters) {
-      addToast('warning', 'Testing Pool Full', 'This app already has 20 active testers.');
-      return false;
-    }
-
-    const newTask: TestingTask = {
-      id: 'task_' + Date.now(),
-      userId: user.uid,
-      appId: app.id,
-      app: app,
-      startDate: new Date().toISOString(),
-      currentDay: 1,
-      totalDays: app.daysRequired || 14,
-      status: 'active',
-      proofSubmittedToday: false,
-      totalCreditsEarned: 0,
-      feedbacks: [],
-    };
-
-    setTasks((prev) => [newTask, ...prev]);
-
-    // Update app testers count locally
-    setApps((prev) =>
-      prev.map((a) =>
-        a.id === app.id ? { ...a, currentTesters: a.currentTesters + 1 } : a
-      )
-    );
-
-    // Update user stats
-    setUser((prev) =>
-      prev ? { ...prev, appsTestedCount: prev.appsTestedCount + 1 } : null
-    );
-
-    // Write to Firestore in background
-    const fb = getFirebaseInstance();
-    if (fb && fb.db) {
-      try {
-        setDoc(doc(fb.db, 'tasks', newTask.id), newTask).catch((e) => console.warn('Firestore task write:', e));
-        updateDoc(doc(fb.db, 'apps', app.id), { currentTesters: increment(1) }).catch((e) => console.warn('Firestore app tester increment:', e));
-        if (user.uid) {
-          updateDoc(doc(fb.db, 'users', user.uid), { appsTestedCount: increment(1) }).catch((e) => console.warn('Firestore user update:', e));
-        }
-      } catch (e) {
-        console.warn('Firestore join task error:', e);
-      }
-    }
-
-    addToast(
-      'success',
-      'Test Joined Successfully! 🎉',
-      `You joined "${app.title}". Submit your Day 1 proof to earn +${app.rewardPerDay} coins!`
-    );
-
-    setSelectedTaskForProof(newTask);
-    return true;
-  };
-
-  // Submit daily proof with 50+ chars review + screenshot
-  const submitDailyProof = (
-    taskId: string,
-    feedbackText: string,
-    screenshotUrl: string,
-    rating: number,
-    deviceModel: string,
-    androidVersion: string
-  ) => {
-    if (!user) {
-      return { success: false, message: 'Please sign in first.' };
-    }
-
-    if (feedbackText.trim().length < 25) {
-      return {
-        success: false,
-        message: `Feedback must be at least 25 characters long for Google Play quality guidelines (currently ${feedbackText.trim().length} chars).`,
-      };
-    }
-
-    const targetTask = tasks.find((t) => t.id === taskId);
-    if (!targetTask) {
-      return { success: false, message: 'Testing task not found.' };
-    }
-
-    if (isTaskProofSubmittedToday(targetTask)) {
-      addToast(
-        'info',
-        'Daily Testing Completed ✓',
-        `You have already submitted today's testing proof for "${targetTask.app.title}". Please return tomorrow for Day ${targetTask.currentDay}!`
-      );
-      return {
-        success: false,
-        message: `You have already completed testing for today. Next session unlocks tomorrow.`,
-      };
-    }
-
-    const appReward = targetTask.app.rewardPerDay || 10;
-    const isLastDay = targetTask.currentDay >= targetTask.totalDays;
-    const bonus = isLastDay ? (targetTask.app.completionBonus || 50) : 0;
-    const earnedThisRound = appReward + bonus;
-
-    const newFeedback: TestingFeedback = {
-      id: 'fb_' + Date.now(),
-      taskId: taskId,
-      appId: targetTask.appId,
+    const coinsEarned = campaign.rewardPerAction || 10;
+    const newTask: CompletedTask = {
+      id: `task-${Date.now()}-${Math.random().toString(36).substring(2, 6)}`,
       userId: user.uid,
       userName: user.displayName,
-      userEmail: user.email,
-      date: new Date().toISOString(),
-      dayNumber: targetTask.currentDay,
-      rating,
-      feedbackText: feedbackText.trim(),
-      screenshotUrl: screenshotUrl || 'https://images.unsplash.com/photo-1551650975-87deedd944c3?w=500&auto=format&fit=crop&q=80',
-      deviceModel: deviceModel || 'Android Device',
-      androidVersion: androidVersion || 'Android 14',
+      campaignId: campaign.id,
+      campaignTitle: campaign.title,
+      platform: campaign.platform,
+      actionType: campaign.actionType,
+      targetUrl: campaign.targetUrl,
+      coinsEarned: coinsEarned,
+      completedAt: new Date().toISOString(),
       status: 'approved',
-      creditsAwarded: earnedThisRound,
     };
 
-    const nextDay = targetTask.currentDay + (isLastDay ? 0 : 1);
-    const updatedTask: TestingTask = {
-      ...targetTask,
-      currentDay: nextDay,
-      status: (isLastDay ? 'completed' : 'active') as 'completed' | 'active',
-      lastFeedbackDate: new Date().toISOString(),
-      proofSubmittedToday: true,
-      totalCreditsEarned: targetTask.totalCreditsEarned + earnedThisRound,
-      feedbacks: [newFeedback, ...targetTask.feedbacks],
+    // Update user balance & counts
+    const newCredits = user.credits + coinsEarned;
+    const newTasksCount = (user.tasksCompletedCount || 0) + 1;
+    const updatedUser: UserProfile = {
+      ...user,
+      credits: newCredits,
+      tasksCompletedCount: newTasksCount,
     };
 
-    setTasks((prev) => prev.map((t) => (t.id === taskId ? updatedTask : t)));
+    setUser(updatedUser);
+    setCompletedTasks(prev => [newTask, ...prev]);
 
-    // Update user balance & streak
-    setUser((prev) => {
-      if (!prev) return null;
-      return {
-        ...prev,
-        credits: prev.credits + earnedThisRound,
-        dailyStreak: prev.dailyStreak + 1,
-      };
-    });
-
-    // Write to Firestore in background
-    const fb = getFirebaseInstance();
-    if (fb && fb.db) {
-      try {
-        setDoc(doc(fb.db, 'tasks', taskId), updatedTask).catch((e) => console.warn('Firestore task update:', e));
-        setDoc(doc(fb.db, 'proofs', newFeedback.id), newFeedback).catch((e) => console.warn('Firestore proof write:', e));
-        if (user.uid) {
-          updateDoc(doc(fb.db, 'users', user.uid), {
-            credits: increment(earnedThisRound),
-            dailyStreak: increment(1)
-          }).catch((e) => console.warn('Firestore user credit update:', e));
-        }
-      } catch (e) {
-        console.warn('Firestore proof submit error:', e);
+    // Increment campaign delivery
+    const updatedDelivered = campaign.deliveredCount + 1;
+    const isCompleted = updatedDelivered >= campaign.requiredCount;
+    setCampaigns(prev => prev.map(c => {
+      if (c.id === campaign.id) {
+        return {
+          ...c,
+          deliveredCount: updatedDelivered,
+          status: isCompleted ? 'completed' : c.status,
+          active: !isCompleted && c.active,
+        };
       }
+      return c;
+    }));
+
+    // Firebase Sync
+    const { db } = getFirebaseInstance();
+    if (db) {
+      setDoc(doc(db, 'boost_completed_tasks', newTask.id), newTask).catch(console.error);
+      updateDoc(doc(db, 'trendboost_users', user.uid), {
+        credits: increment(coinsEarned),
+        tasksCompletedCount: increment(1)
+      }).catch(console.error);
+      updateDoc(doc(db, 'boost_campaigns', campaign.id), {
+        deliveredCount: increment(1),
+        status: isCompleted ? 'completed' : 'running',
+        active: !isCompleted
+      }).catch(console.error);
     }
 
-    fireConfetti();
-
-    addToast(
-      'success',
-      isLastDay ? '14-Day Testing Completed! 🏆' : `Day ${targetTask.currentDay} Proof Verified! ⭐`,
-      `You earned +${earnedThisRound} Coins (${appReward} daily + ${bonus} bonus). Balance updated!`
-    );
-
-    return {
-      success: true,
-      message: 'Proof submitted and verified successfully.',
-      coinsEarned: earnedThisRound,
-    };
+    // Celebration
+    confetti({ particleCount: 90, spread: 80, origin: { y: 0.6 } });
+    addToast('success', `+${coinsEarned} Coins Earned! 🎉`, `Added ${coinsEarned} Coins to your account balance.`);
+    return { success: true, message: `Earned +${coinsEarned} Coins!`, coinsEarned };
   };
 
-  // Add new app (Now stores in CLOUD FIRESTORE so all phones/browsers see it instantly)
-  const addNewApp = (
-    appData: Omit<AppListing, 'id' | 'ownerId' | 'ownerName' | 'ownerEmail' | 'currentTesters' | 'createdAt' | 'active'>
-  ): boolean => {
+  // 4. Daily Bonus
+  const canClaimDailyBonus = !isBonusClaimedToday(user?.lastDailyBonusClaimDate);
+
+  const claimDailyBonus = (): { success: boolean; coins: number } => {
     if (!user) {
-      addToast('error', 'Sign In Required', 'Please sign in to publish an app.');
-      return false;
+      setIsAuthModalOpen(true);
+      return { success: false, coins: 0 };
     }
 
-    const creationCost = 100; // Flat 100 Coins for a full 20-tester closed testing pool
-    if (user.credits < creationCost) {
-      addToast(
-        'error',
-        'Insufficient Credits',
-        `You need ${creationCost} Coins to launch your 20-tester closed test (Current balance: ${user.credits} Coins). Please buy credits or test peer apps!`
-      );
-      setActiveTab('store');
-      return false;
+    if (!canClaimDailyBonus) {
+      addToast('info', 'Already Claimed', 'You have already claimed today’s daily bonus. Come back tomorrow!');
+      return { success: false, coins: 0 };
     }
 
-    const newApp: AppListing = {
-      ...appData,
-      id: 'app_' + Date.now() + '_' + Math.random().toString(36).substring(2, 7),
-      ownerId: user.uid,
-      ownerName: user.displayName,
-      ownerEmail: user.email,
-      currentTesters: 0,
-      createdAt: new Date().toISOString(),
-      active: true,
+    const bonusCoins = 30 + ((user.dailyStreak || 1) * 5); // scales with streak
+    const newStreak = (user.dailyStreak || 0) + 1;
+    const newCredits = user.credits + bonusCoins;
+
+    const updatedUser: UserProfile = {
+      ...user,
+      credits: newCredits,
+      dailyStreak: newStreak,
+      lastDailyBonusClaimDate: new Date().toISOString(),
     };
 
-    // Update local state immediately
-    setApps((prev) => [newApp, ...prev]);
+    setUser(updatedUser);
 
-    // Deduct coins & increment apps count
-    setUser((prev) => {
-      if (!prev) return null;
-      return {
-        ...prev,
-        credits: prev.credits - creationCost,
-        appsSubmittedCount: prev.appsSubmittedCount + 1,
-      };
-    });
-
-    // Write to Firestore Cloud Database so all other phones/users receive it in real-time!
-    const fb = getFirebaseInstance();
-    if (fb && fb.db) {
-      try {
-        setDoc(doc(fb.db, 'apps', newApp.id), newApp)
-          .then(() => {
-            console.log('App published to Firestore cloud successfully:', newApp.id);
-          })
-          .catch((err) => {
-            console.warn('Firestore app write error:', err);
-          });
-
-        if (user.uid) {
-          updateDoc(doc(fb.db, 'users', user.uid), {
-            credits: increment(-creationCost),
-            appsSubmittedCount: increment(1),
-          }).catch((err) => {
-            console.warn('Firestore user update error:', err);
-          });
-        }
-      } catch (err) {
-        console.warn('Firestore app save exception:', err);
-      }
+    const { db } = getFirebaseInstance();
+    if (db) {
+      updateDoc(doc(db, 'trendboost_users', user.uid), {
+        credits: increment(bonusCoins),
+        dailyStreak: newStreak,
+        lastDailyBonusClaimDate: new Date().toISOString(),
+      }).catch(console.error);
     }
 
-    fireConfetti();
-    addToast(
-      'success',
-      'App Published to Testing Exchange! 🚀',
-      `"${newApp.title}" is now live in the cloud! 20 tester slots are open. Deducted ${creationCost} Coins.`
-    );
-    setIsAddAppModalOpen(false);
-    setActiveTab('my-apps');
-    return true;
+    confetti({ particleCount: 120, spread: 100, origin: { y: 0.5 } });
+    addToast('success', `Daily Reward: +${bonusCoins} Coins! 🔥`, `Current Streak: ${newStreak} Days!`);
+    return { success: true, coins: bonusCoins };
   };
 
-  // Update existing app details
-  const updateApp = (
-    appId: string,
-    updatedFields: Partial<Pick<AppListing, 'title' | 'description' | 'iconUrl' | 'groupUrl' | 'storeWebUrl' | 'storeAndroidUrl' | 'category' | 'packageName'>>
-  ): boolean => {
-    if (!user) {
-      addToast('error', 'Sign In Required', 'Please sign in to edit your app.');
-      return false;
-    }
-
-    const targetApp = apps.find((a) => a.id === appId);
-    if (!targetApp) {
-      addToast('error', 'App Not Found', 'Application does not exist.');
-      return false;
-    }
-
-    if (targetApp.ownerId !== user.uid) {
-      addToast('error', 'Unauthorized', 'You can only edit applications you published.');
-      return false;
-    }
-
-    const updatedApp: AppListing = {
-      ...targetApp,
-      ...updatedFields,
-    };
-
-    // Update apps list locally
-    setApps((prev) => prev.map((a) => (a.id === appId ? updatedApp : a)));
-
-    // Update active tasks referencing this app
-    setTasks((prev) =>
-      prev.map((t) => (t.appId === appId ? { ...t, app: updatedApp } : t))
-    );
-
-    // Save to Firestore
-    const fb = getFirebaseInstance();
-    if (fb && fb.db) {
-      try {
-        updateDoc(doc(fb.db, 'apps', appId), updatedFields).catch((err) =>
-          console.warn('Firestore app update error:', err)
-        );
-      } catch (e) {
-        console.warn('Firestore update exception:', e);
-      }
-    }
-
-    addToast(
-      'success',
-      'App Updated Successfully! ✏️',
-      `Changes to "${updatedApp.title}" have been saved.`
-    );
-    setEditingApp(null);
-    return true;
-  };
-
-  // Delete published app
-  const deleteApp = (appId: string): boolean => {
-    if (!user) {
-      addToast('error', 'Sign In Required', 'Please sign in to manage apps.');
-      return false;
-    }
-
-    const targetApp = apps.find((a) => a.id === appId);
-    if (!targetApp) {
-      addToast('error', 'App Not Found', 'Application does not exist.');
-      return false;
-    }
-
-    if (targetApp.ownerId !== user.uid) {
-      addToast('error', 'Unauthorized', 'You can only delete your own applications.');
-      return false;
-    }
-
-    const hadZeroTesters = targetApp.currentTesters === 0;
-    const refundAmount = hadZeroTesters ? 100 : 0;
-
-    // Remove app from local state
-    setApps((prev) => prev.filter((a) => a.id !== appId));
-
-    // Remove related tasks
-    setTasks((prev) => prev.filter((t) => t.appId !== appId));
-
-    // If 0 testers joined, refund 100 coins
-    if (refundAmount > 0) {
-      setUser((prev) =>
-        prev
-          ? {
-              ...prev,
-              credits: prev.credits + refundAmount,
-              appsSubmittedCount: Math.max(0, prev.appsSubmittedCount - 1),
-            }
-          : null
-      );
-    }
-
-    // Firestore delete
-    const fb = getFirebaseInstance();
-    if (fb && fb.db) {
-      try {
-        deleteDoc(doc(fb.db, 'apps', appId)).catch((err) =>
-          console.warn('Firestore app delete error:', err)
-        );
-        if (refundAmount > 0 && user.uid) {
-          updateDoc(doc(fb.db, 'users', user.uid), {
-            credits: increment(refundAmount),
-            appsSubmittedCount: increment(-1),
-          }).catch((err) => console.warn('Firestore refund error:', err));
-        }
-      } catch (e) {
-        console.warn('Firestore delete exception:', e);
-      }
-    }
-
-    if (refundAmount > 0) {
-      addToast(
-        'info',
-        'App Deleted & Refunded 🔄',
-        `"${targetApp.title}" was removed. Since 0 testers joined, +100 Coins were refunded to your balance!`
-      );
-    } else {
-      addToast(
-        'info',
-        'App Removed from Exchange 🗑️',
-        `"${targetApp.title}" was removed from the active testing list.`
-      );
-    }
-
-    return true;
-  };
-
-  // Buy Credits
-  const buyCredits = (packageId: string, reference?: string) => {
-    const pkg = CREDIT_PACKAGES.find((p) => p.id === packageId);
+  // 5. Buy Credits / Packages
+  const buyCredits = (packageId: string) => {
+    const pkg = CREDIT_PACKAGES.find(p => p.id === packageId);
     if (!pkg) return;
 
-    setUser((prev) => {
-      if (!prev) return null;
-      return {
-        ...prev,
-        credits: prev.credits + pkg.credits,
-      };
-    });
-
-    const fb = getFirebaseInstance();
-    if (fb && fb.db && user?.uid) {
-      updateDoc(doc(fb.db, 'users', user.uid), {
-        credits: increment(pkg.credits),
-      }).catch((e) => console.warn('Firestore credit update:', e));
-
-      // Record transaction history
-      const txId = reference || `TX_${Date.now()}_${Math.floor(Math.random() * 1000)}`;
-      setDoc(doc(fb.db, 'transactions', txId), {
-        id: txId,
-        reference: reference || 'direct_checkout',
-        userId: user.uid,
-        userEmail: user.email,
-        userName: user.displayName,
-        packageId: pkg.id,
-        packageName: pkg.name,
-        coinsAwarded: pkg.credits,
-        priceNgn: pkg.priceNgn,
-        priceUsd: pkg.priceUsd,
-        timestamp: new Date().toISOString(),
-        status: 'success',
-      }).catch((e) => console.warn('Firestore transaction log:', e));
+    if (!user) {
+      setIsAuthModalOpen(true);
+      return;
     }
 
-    fireConfetti();
-    addToast(
-      'success',
-      'Payment Confirmed! 💳 🎉',
-      `+${pkg.credits} Coins have been added to your balance! (Ref: ${reference || 'Instant'})`
-    );
+    const addedCredits = pkg.credits + (pkg.bonusCredits || 0);
+    const newCredits = user.credits + addedCredits;
+    const updatedUser = { ...user, credits: newCredits, boosterTier: (addedCredits >= 1000 ? 'Diamond VIP' : 'Gold') as any };
+
+    setUser(updatedUser);
+
+    const { db } = getFirebaseInstance();
+    if (db) {
+      updateDoc(doc(db, 'trendboost_users', user.uid), {
+        credits: increment(addedCredits),
+        boosterTier: updatedUser.boosterTier,
+      }).catch(console.error);
+    }
+
+    confetti({ particleCount: 140, spread: 90, origin: { y: 0.5 } });
+    addToast('success', `Coin Purchase Successful! 🎉`, `Credited ${addedCredits.toLocaleString()} Coins to your wallet.`);
   };
 
-  // Referral Copy Link
+  // 6. Referrals
   const copyReferralLink = () => {
-    const code = user?.referralCode || 'PLAY20-MZ88';
-    const baseUrl = typeof window !== 'undefined' && window.location.origin.includes('hausatech')
-      ? window.location.origin 
-      : (typeof window !== 'undefined' ? window.location.origin : 'https://testers.hausatech.com');
-    const link = `${baseUrl}?ref=${code}`;
-    navigator.clipboard.writeText(link).catch(() => {});
-    addToast(
-      'success',
-      'Referral Link Copied! 📋',
-      'Share this link with developers. When they test an app, you both get +50 Coins!'
-    );
+    if (!user) {
+      setIsAuthModalOpen(true);
+      return;
+    }
+    const link = `https://trendboost.app?ref=${user.referralCode || 'TREND'}`;
+    navigator.clipboard.writeText(link).then(() => {
+      addToast('success', 'Link Copied!', 'Referral link copied to clipboard. Share with friends to earn free coins!');
+    }).catch(() => {
+      addToast('info', 'Your Referral Link:', link);
+    });
   };
 
-  // Demo Claim Referral Bonus
   const claimReferralBonus = () => {
-    setUser((prev) => {
-      if (!prev) return null;
-      return {
-        ...prev,
-        credits: prev.credits + 50,
-        referralsCount: prev.referralsCount + 1,
-        referralEarnings: prev.referralEarnings + 50,
-      };
-    });
-
-    if (user?.uid) {
-      const fb = getFirebaseInstance();
-      if (fb && fb.db) {
-        updateDoc(doc(fb.db, 'users', user.uid), {
-          credits: increment(50),
-          referralsCount: increment(1),
-          referralEarnings: increment(50),
-        }).catch((e) => console.warn('Firestore referral bonus:', e));
-      }
-    }
-
-    const newRef: ReferralHistoryItem = {
-      id: 'ref_' + Date.now(),
-      referredName: 'New Android Dev (' + (user?.referralsCount ? user.referralsCount + 1 : 1) + ')',
-      date: 'Just now',
-      coinsEarned: 50,
-      status: 'completed',
-    };
-
-    setReferrals((prev) => [newRef, ...prev]);
-    fireConfetti();
-    addToast(
-      'success',
-      'Referral Bonus Claimed! 🎁',
-      '+50 Coins added to your balance for inviting a developer!'
-    );
+    if (!user) return;
+    const bonus = 50;
+    const newCredits = user.credits + bonus;
+    setUser({ ...user, credits: newCredits, referralEarnings: (user.referralEarnings || 0) + bonus });
+    addToast('success', '+50 Referral Coins!', 'Claimed your friend referral bonus reward.');
   };
 
   return (
     <AppContext.Provider
       value={{
         user,
-        apps,
-        tasks,
+        campaigns,
+        completedTasks,
         activeTab,
         setActiveTab,
         signInWithGoogle,
@@ -1047,20 +780,20 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         signOutUser,
         isAuthModalOpen,
         setIsAuthModalOpen,
-        joinAppTest,
-        submitDailyProof,
-        addNewApp,
-        editingApp,
-        setEditingApp,
-        updateApp,
-        deleteApp,
+        createNewCampaign,
+        editingCampaign,
+        setEditingCampaign,
+        updateCampaign,
+        toggleCampaignStatus,
+        deleteCampaign,
+        selectedCampaignForTask,
+        setSelectedCampaignForTask,
+        executeBoostTask,
+        canClaimDailyBonus,
+        claimDailyBonus,
         buyCredits,
-        selectedTaskForProof,
-        setSelectedTaskForProof,
-        selectedAppToJoin,
-        setSelectedAppToJoin,
-        isAddAppModalOpen,
-        setIsAddAppModalOpen,
+        isCreateCampaignModalOpen,
+        setIsCreateCampaignModalOpen,
         isDeployGuideOpen,
         setIsDeployGuideOpen,
         isFirebaseModalOpen,
@@ -1082,8 +815,10 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         removeToast,
         searchQuery,
         setSearchQuery,
-        selectedCategory,
-        setSelectedCategory,
+        selectedPlatform,
+        setSelectedPlatform,
+        selectedActionType,
+        setSelectedActionType,
       }}
     >
       {children}

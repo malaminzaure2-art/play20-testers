@@ -1,463 +1,255 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect } from 'react';
+import { useApp } from '../context/AppContext';
 import { 
-  Users, 
-  Play, 
+  X, 
   ExternalLink, 
-  Coins, 
   CheckCircle2, 
-  Sparkles,
-  Star,
-  Timer,
-  Upload,
+  Sparkles, 
+  ShieldCheck, 
+  Clock, 
   AlertCircle,
-  Smartphone,
-  ShieldCheck,
-  CalendarCheck
+  Zap,
+  ThumbsUp,
+  UserPlus,
+  PlaySquare,
+  Eye,
+  Send,
+  MessageSquare
 } from 'lucide-react';
-import { useApp, isTaskProofSubmittedToday } from '../context/AppContext';
 
 export const TaskModal: React.FC = () => {
-  const { 
-    selectedTaskForProof, 
-    setSelectedTaskForProof, 
-    submitDailyProof, 
-    addToast 
+  const {
+    selectedCampaignForTask,
+    setSelectedCampaignForTask,
+    executeBoostTask,
+    user,
   } = useApp();
 
-  const task = selectedTaskForProof;
+  const [hasOpenedLink, setHasOpenedLink] = useState(false);
+  const [secondsRemaining, setSecondsRemaining] = useState(10);
+  const [isTimerRunning, setIsTimerRunning] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
-  const alreadySubmittedToday = isTaskProofSubmittedToday(task);
-
-  const [feedbackText, setFeedbackText] = useState<string>('');
-  const [rating, setRating] = useState<number>(5);
-  const [isSubmitting, setIsSubmitting] = useState<boolean>(false);
-  const [visitedGroup, setVisitedGroup] = useState<boolean>(false);
-  const [visitedStore, setVisitedStore] = useState<boolean>(false);
-  const [secondsRemaining, setSecondsRemaining] = useState<number>(15); // 15-second active verification timer
-  const [screenshotPreview, setScreenshotPreview] = useState<string | null>(null);
-  const fileInputRef = useRef<HTMLInputElement>(null);
-
-  const isDayOne = task?.currentDay === 1;
-
-  const handleOpenGroup = (e: React.MouseEvent) => {
-    e.preventDefault();
-    const url = task?.app.groupUrl && task.app.groupUrl.startsWith('http') 
-      ? task.app.groupUrl 
-      : 'https://groups.google.com/g/play20-testers';
-    window.open(url, '_blank', 'noopener,noreferrer');
-    setVisitedGroup(true);
-    addToast('info', 'Google Group Opened', 'Please click "Join group" on Google Groups page.');
-  };
-
-  const handleOpenStore = (e: React.MouseEvent) => {
-    e.preventDefault();
-    const url = task?.app.storeAndroidUrl || task?.app.storeWebUrl || (task?.app.packageName ? `https://play.google.com/store/apps/details?id=${task.app.packageName}` : 'https://play.google.com');
-    window.open(url, '_blank', 'noopener,noreferrer');
-    setVisitedStore(true);
-    addToast('info', 'Play Store Opened', 'Please install or open the app on your device.');
-  };
-
-  // Reset states whenever modal opens for a task
+  // Reset state when a new campaign is selected
   useEffect(() => {
-    if (task) {
-      setFeedbackText('');
-      setRating(5);
-      // On Day 2-14, Google Group & Play Store are already opted-in from Day 1
-      setVisitedGroup(!isDayOne);
-      setVisitedStore(!isDayOne);
-      setSecondsRemaining(15);
-      setScreenshotPreview(null);
+    if (selectedCampaignForTask) {
+      setHasOpenedLink(false);
+      setSecondsRemaining(selectedCampaignForTask.minDurationSeconds || 10);
+      setIsTimerRunning(false);
+      setIsSubmitting(false);
     }
-  }, [task?.id, isDayOne]);
+  }, [selectedCampaignForTask]);
 
-  // 15-second countdown timer for authentic testing verification
+  // Countdown timer effect
   useEffect(() => {
-    if (!task) return;
-    if (secondsRemaining <= 0) return;
-
-    const interval = setInterval(() => {
-      setSecondsRemaining((prev) => Math.max(0, prev - 1));
-    }, 1000);
-
+    let interval: any = null;
+    if (isTimerRunning && secondsRemaining > 0) {
+      interval = setInterval(() => {
+        setSecondsRemaining((prev) => prev - 1);
+      }, 1000);
+    } else if (secondsRemaining === 0) {
+      setIsTimerRunning(false);
+    }
     return () => clearInterval(interval);
-  }, [task, secondsRemaining]);
+  }, [isTimerRunning, secondsRemaining]);
 
-  if (!task) return null;
+  if (!selectedCampaignForTask) return null;
 
-  const minFeedbackLength = 25;
-  const isFeedbackValid = feedbackText.trim().length >= minFeedbackLength;
-  const isTimerDone = secondsRemaining === 0;
-  const hasScreenshot = !!screenshotPreview;
-  const canSubmit = isTimerDone && isFeedbackValid && visitedGroup && visitedStore && hasScreenshot && !isSubmitting;
+  const camp = selectedCampaignForTask;
 
-  const handleScreenshotChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
-
-    if (!file.type.startsWith('image/')) {
-      addToast('error', 'Invalid File', 'Please select an image file (PNG, JPG).');
-      return;
-    }
-
-    const reader = new FileReader();
-    reader.onload = (event) => {
-      setScreenshotPreview(event.target?.result as string);
-      addToast('success', 'Screenshot Attached', 'Proof screenshot loaded.');
-    };
-    reader.readAsDataURL(file);
+  const handleOpenLink = () => {
+    setHasOpenedLink(true);
+    setIsTimerRunning(true);
+    setSecondsRemaining(camp.minDurationSeconds || 10);
+    window.open(camp.targetUrl, '_blank', 'noopener,noreferrer');
   };
 
-  const handleSubmitProof = (e: React.FormEvent) => {
-    e.preventDefault();
-
-    if (!visitedGroup) {
-      addToast('error', 'Google Group Step Required', 'Please click "1. Join Google Group" first.');
-      return;
-    }
-
-    if (!visitedStore) {
-      addToast('error', 'Play Store Step Required', 'Please click "2. Open Play Store" to install the app.');
-      return;
-    }
-
-    if (!isTimerDone) {
-      addToast('warning', 'Testing Timer Active', `Please test the app for ${secondsRemaining} more seconds.`);
-      return;
-    }
-
-    if (!isFeedbackValid) {
-      addToast('error', 'Feedback Too Short', `Please write at least ${minFeedbackLength} characters of qualitative feedback.`);
-      return;
-    }
-
-    if (!hasScreenshot) {
-      addToast('error', 'Screenshot Proof Required', 'Please take and upload a screenshot of the app running on your device.');
-      return;
-    }
-
+  const handleClaim = () => {
     setIsSubmitting(true);
-
-    const result = submitDailyProof(
-      task.id,
-      feedbackText.trim(),
-      screenshotPreview || '',
-      rating,
-      'Android Device',
-      'Android 14'
-    );
-
-    setIsSubmitting(false);
-
-    if (result.success) {
-      setSelectedTaskForProof(null);
-    }
+    setTimeout(() => {
+      const res = executeBoostTask(camp);
+      if (res.success) {
+        setSelectedCampaignForTask(null);
+      }
+      setIsSubmitting(false);
+    }, 400);
   };
+
+  const totalDuration = camp.minDurationSeconds || 10;
+  const progressPercent = Math.round(((totalDuration - secondsRemaining) / totalDuration) * 100);
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/60 backdrop-blur-sm p-4 overflow-y-auto">
-      <div className="relative w-full max-w-lg rounded-3xl border border-slate-200 bg-white p-6 sm:p-7 shadow-2xl my-8 animate-in fade-in zoom-in-95 duration-200 max-h-[90vh] overflow-y-auto">
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-xs animate-fadeIn">
+      <div className="bg-white rounded-3xl max-w-lg w-full overflow-hidden shadow-2xl border border-slate-200/80 flex flex-col max-h-[90vh]">
         
         {/* Modal Header */}
-        <div className="flex items-start justify-between border-b border-slate-100 pb-4">
-          <div className="flex items-center gap-3">
-            <img
-              src={task.app.iconUrl}
-              alt={task.app.title}
-              className="h-12 w-12 rounded-xl object-cover ring-1 ring-slate-200 bg-slate-100"
-              onError={(e) => {
-                (e.target as HTMLImageElement).src = 'https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?w=120&auto=format&fit=crop&q=80';
-              }}
-            />
+        <div className="p-5 border-b border-slate-100 flex items-center justify-between bg-slate-50/70">
+          <div className="flex items-center gap-2.5">
+            <div className="w-10 h-10 rounded-xl bg-gradient-to-tr from-indigo-600 to-purple-600 flex items-center justify-center text-white font-bold shadow-xs">
+              <Zap className="w-5 h-5 text-amber-300" />
+            </div>
             <div>
-              <div className="flex items-center gap-2">
-                <span className="text-[10px] font-bold text-indigo-700 uppercase tracking-wider">
-                  Day {task.currentDay} of {task.totalDays} Verification
-                </span>
-                <span className="rounded bg-emerald-50 border border-emerald-200 text-emerald-800 text-[10px] font-bold px-2 py-0.5">
-                  +{task.app.rewardPerDay} Coins
-                </span>
-              </div>
-              <h3 className="text-base font-bold text-slate-900">{task.app.title}</h3>
+              <h3 className="font-extrabold text-base text-slate-900 leading-tight">
+                Complete Boost Task
+              </h3>
+              <p className="text-xs text-slate-500">
+                {camp.platform.toUpperCase()} • Earn +{camp.rewardPerAction} Coins
+              </p>
             </div>
           </div>
 
           <button
-            onClick={() => setSelectedTaskForProof(null)}
-            className="rounded-lg p-1.5 text-slate-400 hover:bg-slate-100 hover:text-slate-700 transition-colors"
+            onClick={() => setSelectedCampaignForTask(null)}
+            className="p-1.5 rounded-lg text-slate-400 hover:text-slate-700 hover:bg-slate-200/60 transition cursor-pointer"
           >
-            ✕
+            <X className="w-5 h-5" />
           </button>
         </div>
 
-        {/* Already Submitted Today View */}
-        {alreadySubmittedToday ? (
-          <div className="mt-6 space-y-4 text-center">
-            <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-3xl bg-emerald-50 border border-emerald-200 text-emerald-600 shadow-xs animate-in zoom-in-90">
-              <CheckCircle2 className="h-9 w-9" />
-            </div>
-
-            <div>
-              <span className="text-[10px] font-bold uppercase tracking-wider text-emerald-700 bg-emerald-100/60 px-2.5 py-0.5 rounded-full">
-                Today's Testing Done ✓
-              </span>
-              <h4 className="text-base font-bold text-slate-900 mt-2">
-                You've completed today's testing!
-              </h4>
-              <p className="text-xs text-slate-600 mt-1 max-w-sm mx-auto leading-relaxed">
-                You have already submitted your daily feedback and claimed your <strong>+{task.app.rewardPerDay} coins</strong> today.
-              </p>
-            </div>
-
-            <div className="rounded-2xl border border-slate-200 bg-slate-50 p-3.5 text-xs text-slate-700 flex items-center justify-between">
-              <div className="flex items-center gap-2 text-left">
-                <CalendarCheck className="h-4 w-4 text-indigo-600 shrink-0" />
-                <div>
-                  <span className="font-bold block">14-Day Google Play Policy</span>
-                  <span className="text-[11px] text-slate-500">Day {task.currentDay} testing session unlocks tomorrow.</span>
-                </div>
-              </div>
-              <span className="text-xs font-mono font-bold text-indigo-600 bg-white px-2 py-1 rounded-lg border border-slate-200">
-                Next: Day {task.currentDay}
-              </span>
-            </div>
-
-            <div className="pt-2">
-              <button
-                type="button"
-                onClick={() => setSelectedTaskForProof(null)}
-                className="w-full rounded-xl bg-slate-900 hover:bg-slate-800 text-white py-2.5 text-xs font-bold transition-all shadow-xs"
-              >
-                Close & Return
-              </button>
-            </div>
-          </div>
-        ) : (
-          /* Verification Steps Form */
-          <form onSubmit={handleSubmitProof} className="mt-4 space-y-4">
+        {/* Modal Body */}
+        <div className="p-6 space-y-5 overflow-y-auto flex-1">
           
-          {/* Step 1 & Step 2: Group & Play Store Links */}
-          {isDayOne ? (
-            <div>
-              <span className="text-[11px] font-bold text-slate-700 block mb-2">
-                Step 1 & 2: Complete Google Play Opt-In (Day 1 Only)
+          {/* Campaign Details Box */}
+          <div className="p-4 rounded-2xl bg-slate-50 border border-slate-200 space-y-2">
+            <div className="flex items-center justify-between gap-2">
+              <span className="text-[11px] font-bold px-2 py-0.5 rounded-md bg-indigo-100 text-indigo-800 uppercase">
+                {camp.actionType} on {camp.platform}
               </span>
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
-                <button
-                  type="button"
-                  onClick={handleOpenGroup}
-                  className={`flex items-center justify-center gap-2 rounded-xl py-2.5 px-3 text-xs font-bold transition-all border ${
-                    visitedGroup 
-                      ? 'bg-emerald-50 text-emerald-800 border-emerald-300 shadow-xs' 
-                      : 'bg-indigo-50 hover:bg-indigo-100 text-indigo-900 border-indigo-200 active:scale-95'
-                  }`}
-                >
-                  <Users className={`h-4 w-4 ${visitedGroup ? 'text-emerald-600' : 'text-indigo-600'}`} />
-                  <span>{visitedGroup ? '✓ 1. Group Joined' : '1. Join Google Group'}</span>
-                  <ExternalLink className="h-3 w-3 opacity-60" />
-                </button>
+              <span className="text-xs font-black text-amber-900 bg-amber-100/80 px-2 py-0.5 rounded-lg">
+                🪙 +{camp.rewardPerAction} Coins
+              </span>
+            </div>
 
-                <button
-                  type="button"
-                  onClick={handleOpenStore}
-                  className={`flex items-center justify-center gap-2 rounded-xl py-2.5 px-3 text-xs font-bold transition-all border ${
-                    visitedStore 
-                      ? 'bg-emerald-50 text-emerald-800 border-emerald-300 shadow-xs' 
-                      : 'bg-indigo-600 hover:bg-indigo-700 text-white border-transparent shadow-xs active:scale-95'
-                  }`}
-                >
-                  <Play className={`h-4 w-4 ${visitedStore ? 'text-emerald-600 fill-emerald-600' : 'text-white fill-white'}`} />
-                  <span>{visitedStore ? '✓ 2. Play Store Opened' : '2. Open Play Store'}</span>
-                  <ExternalLink className="h-3 w-3 opacity-60" />
-                </button>
-              </div>
-            </div>
-          ) : (
-            <div className="flex items-center justify-between p-3 rounded-2xl bg-slate-50 border border-slate-200 text-xs">
-              <div className="flex items-center gap-2 text-emerald-800 font-semibold">
-                <CheckCircle2 className="h-4 w-4 text-emerald-600 shrink-0" />
-                <span>Google Group Opt-In Active (Day 1 Verified)</span>
-              </div>
-              <button
-                type="button"
-                onClick={handleOpenStore}
-                className="text-[11px] font-bold text-indigo-600 hover:text-indigo-700 underline flex items-center gap-1"
-              >
-                <span>Launch App</span>
-                <ExternalLink className="h-3 w-3" />
-              </button>
-            </div>
-          )}
+            <h4 className="font-bold text-sm text-slate-900 leading-snug">
+              {camp.title}
+            </h4>
 
-          {/* Active Testing Timer */}
-          <div className={`p-3 rounded-2xl border flex items-center justify-between transition-all ${
-            isTimerDone 
-              ? 'bg-emerald-50/70 border-emerald-200 text-emerald-900' 
-              : 'bg-amber-50/70 border-amber-200 text-amber-900'
-          }`}>
-            <div className="flex items-center gap-2.5">
-              <Timer className={`h-4 w-4 ${isTimerDone ? 'text-emerald-600' : 'text-amber-600 animate-pulse'}`} />
-              <div>
-                <span className="text-xs font-bold block">
-                  {isTimerDone ? 'Active Testing Verified' : 'Testing Engagement Timer'}
-                </span>
-                <span className="text-[10px] opacity-80">
-                  {isTimerDone ? 'You completed the mandatory testing session.' : 'Please test the app features during this session.'}
-                </span>
-              </div>
-            </div>
-            
-            <div className={`text-xs font-black px-2.5 py-1 rounded-xl ${
-              isTimerDone ? 'bg-emerald-200 text-emerald-900' : 'bg-amber-200 text-amber-950'
-            }`}>
-              {isTimerDone ? '✓ Verified' : `${secondsRemaining}s`}
-            </div>
+            <p className="text-xs text-slate-600 leading-relaxed">
+              {camp.description}
+            </p>
           </div>
 
-          {/* Qualitative Feedback & Star Rating */}
-          <div>
-            <div className="flex items-center justify-between mb-1.5">
-              <label className="text-xs font-bold text-slate-800">
-                Testing Feedback & Bug Report <span className="text-rose-500">*</span>
-              </label>
-              <div className="flex items-center gap-0.5">
-                {[1, 2, 3, 4, 5].map((star) => (
-                  <button
-                    key={star}
-                    type="button"
-                    onClick={() => setRating(star)}
-                    className="p-0.5"
-                  >
-                    <Star
-                      className={`h-3.5 w-3.5 ${
-                        star <= rating
-                          ? 'fill-amber-400 text-amber-400'
-                          : 'text-slate-300'
-                      }`}
-                    />
-                  </button>
-                ))}
-              </div>
-            </div>
+          {/* Step-by-Step Instructions */}
+          <div className="space-y-3">
+            <h5 className="font-bold text-xs text-slate-700 uppercase tracking-wider">
+              How to complete this task in 3 simple steps:
+            </h5>
 
-            <textarea
-              rows={3}
-              required
-              value={feedbackText}
-              onChange={(e) => setFeedbackText(e.target.value)}
-              placeholder="Describe your testing experience, device behavior, UI feedback, or any bugs found..."
-              className="w-full rounded-xl border border-slate-200 bg-white px-3.5 py-2.5 text-xs text-slate-900 placeholder-slate-400 focus:border-indigo-600 focus:outline-none focus:ring-2 focus:ring-indigo-100 transition-all resize-none shadow-xs"
-            />
-            
-            <div className="flex items-center justify-between mt-1 text-[10px]">
-              <span className={isFeedbackValid ? 'text-emerald-600 font-bold' : 'text-slate-400'}>
-                {feedbackText.trim().length}/{minFeedbackLength} characters minimum
-              </span>
-              <span className="text-slate-400">Google Play Compliance</span>
-            </div>
-          </div>
-
-          {/* Screenshot Proof Upload (Mandatory) */}
-          <div>
-            <div className="flex items-center justify-between mb-1">
-              <label className="text-[11px] font-bold text-slate-800 flex items-center gap-1">
-                <span>Screenshot Proof from Phone</span>
-                <span className="text-rose-500 font-bold">* (MANDATORY)</span>
-              </label>
-              {screenshotPreview && (
-                <button
-                  type="button"
-                  onClick={() => setScreenshotPreview(null)}
-                  className="text-[10px] text-rose-600 font-bold hover:underline"
-                >
-                  Remove
-                </button>
-              )}
-            </div>
-
-            <input
-              ref={fileInputRef}
-              type="file"
-              accept="image/*"
-              className="hidden"
-              onChange={handleScreenshotChange}
-            />
-
-            {screenshotPreview ? (
-              <div className="relative rounded-2xl border border-emerald-200 overflow-hidden bg-emerald-50/50 p-2.5 flex items-center gap-3">
-                <img
-                  src={screenshotPreview}
-                  alt="Proof preview"
-                  className="h-14 w-14 rounded-xl object-cover ring-2 ring-emerald-500 shrink-0"
-                />
-                <div className="text-xs">
-                  <span className="font-bold text-emerald-950 flex items-center gap-1">
-                    <CheckCircle2 className="h-3.5 w-3.5 text-emerald-600" />
-                    Screenshot Proof Attached
-                  </span>
-                  <span className="text-[10px] text-emerald-700 block mt-0.5">
-                    Verified real device testing proof.
-                  </span>
+            <div className="space-y-2.5">
+              
+              {/* Step 1 */}
+              <div className="flex items-start gap-3 p-3 rounded-xl bg-indigo-50/50 border border-indigo-100">
+                <div className="w-6 h-6 rounded-full bg-indigo-600 text-white font-bold text-xs flex items-center justify-center shrink-0 mt-0.5">
+                  1
+                </div>
+                <div className="text-xs text-slate-700">
+                  <strong>Click 'Open Link':</strong> This will open the target {camp.platform.toUpperCase()} profile or video in a new tab/app.
                 </div>
               </div>
-            ) : (
-              <button
-                type="button"
-                onClick={() => fileInputRef.current?.click()}
-                className="w-full rounded-xl border-2 border-dashed border-indigo-200 hover:border-indigo-500 bg-indigo-50/30 hover:bg-indigo-50/70 p-3.5 text-center transition-all flex items-center justify-center gap-2 text-xs font-bold text-indigo-700 active:scale-98"
-              >
-                <Upload className="h-4 w-4 text-indigo-600" />
-                <span>Upload Screenshot of App Running on Phone *</span>
-              </button>
-            )}
-          </div>
 
-          {/* Action Buttons */}
-          <div className="pt-2">
-            {!canSubmit && (
-              <div className="mb-2.5 p-2.5 rounded-xl bg-slate-50 border border-slate-200 text-[11px] text-slate-700 flex items-center gap-2">
-                <AlertCircle className="h-4 w-4 text-indigo-600 shrink-0" />
-                <span className="font-medium">
-                  {!visitedGroup 
-                    ? 'Click "1. Join Google Group" to start' 
-                    : !visitedStore 
-                    ? 'Click "2. Open Play Store" to install' 
-                    : !isTimerDone 
-                    ? `Active testing timer (${secondsRemaining}s remaining)` 
-                    : !isFeedbackValid 
-                    ? `Write at least ${minFeedbackLength - feedbackText.trim().length} more characters of feedback` 
-                    : !hasScreenshot
-                    ? 'Upload a screenshot of the app running on your phone'
-                    : 'Ready to claim coins!'}
-                </span>
+              {/* Step 2 */}
+              <div className="flex items-start gap-3 p-3 rounded-xl bg-purple-50/50 border border-purple-100">
+                <div className="w-6 h-6 rounded-full bg-purple-600 text-white font-bold text-xs flex items-center justify-center shrink-0 mt-0.5">
+                  2
+                </div>
+                <div className="text-xs text-slate-700">
+                  <strong>Perform the required action:</strong> Tap <strong>{camp.actionType.toUpperCase()}</strong> or watch the content for the required duration.
+                </div>
               </div>
-            )}
 
-            <div className="flex items-center gap-3">
-              <button
-                type="button"
-                onClick={() => setSelectedTaskForProof(null)}
-                className="flex-1 rounded-xl border border-slate-200 bg-white py-2.5 text-xs font-bold text-slate-600 hover:bg-slate-50 transition-colors"
-              >
-                Cancel
-              </button>
+              {/* Step 3 */}
+              <div className="flex items-start gap-3 p-3 rounded-xl bg-amber-50/50 border border-amber-100">
+                <div className="w-6 h-6 rounded-full bg-amber-600 text-white font-bold text-xs flex items-center justify-center shrink-0 mt-0.5">
+                  3
+                </div>
+                <div className="text-xs text-slate-700">
+                  <strong>Return here & claim:</strong> Once the verification timer completes, click 'Verify & Claim Coins'.
+                </div>
+              </div>
 
-              <button
-                type="submit"
-                disabled={!canSubmit}
-                className={`flex-[2] rounded-xl py-2.5 text-xs font-bold transition-all shadow-xs flex items-center justify-center gap-2 ${
-                  canSubmit
-                    ? 'bg-indigo-600 hover:bg-indigo-700 text-white shadow-indigo-100 active:scale-95 cursor-pointer'
-                    : 'bg-slate-200 text-slate-400 border border-slate-300 cursor-not-allowed'
-                }`}
-              >
-                <Coins className="h-4 w-4 text-amber-300" />
-                <span>Claim +{task.app.rewardPerDay} Coins & Complete</span>
-              </button>
             </div>
           </div>
 
-        </form>
-        )}
+          {/* Action Trigger Area */}
+          <div className="space-y-3 pt-2">
+            
+            {/* Step 1 Button: Open Link */}
+            {!hasOpenedLink ? (
+              <button
+                id="btn-open-task-link"
+                onClick={handleOpenLink}
+                className="w-full py-3.5 bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-700 hover:to-purple-700 text-white font-bold text-sm rounded-2xl shadow-md shadow-indigo-500/20 transition flex items-center justify-center gap-2 cursor-pointer"
+              >
+                <ExternalLink className="w-4 h-4" />
+                <span>1. Open {camp.platform.toUpperCase()} Link</span>
+              </button>
+            ) : (
+              /* Step 2: Verification Timer & Claim */
+              <div className="space-y-3">
+                
+                {/* Timer Bar */}
+                <div className="bg-slate-50 p-4 rounded-2xl border border-slate-200 space-y-2">
+                  <div className="flex items-center justify-between text-xs font-bold">
+                    <span className="text-slate-600 flex items-center gap-1.5">
+                      <Clock className="w-4 h-4 text-indigo-600" />
+                      {secondsRemaining > 0 ? 'Verifying action duration...' : 'Verification Completed!'}
+                    </span>
+                    <span className={secondsRemaining > 0 ? 'text-indigo-600 font-mono font-black text-sm' : 'text-emerald-600 font-bold'}>
+                      {secondsRemaining > 0 ? `${secondsRemaining}s` : 'Ready! ✅'}
+                    </span>
+                  </div>
+
+                  {/* Progress bar */}
+                  <div className="w-full h-2.5 rounded-full bg-slate-200 overflow-hidden">
+                    <div
+                      className={`h-full transition-all duration-1000 rounded-full ${
+                        secondsRemaining === 0 ? 'bg-emerald-500' : 'bg-indigo-600'
+                      }`}
+                      style={{ width: `${progressPercent}%` }}
+                    />
+                  </div>
+
+                  <div className="text-[11px] text-slate-500 text-center">
+                    {secondsRemaining > 0 
+                      ? 'Please wait for the timer to finish before claiming your reward coins.' 
+                      : 'Verification complete! Tap the button below to credit your coins.'}
+                  </div>
+                </div>
+
+                {/* Claim Button */}
+                <button
+                  id="btn-claim-task-reward"
+                  disabled={secondsRemaining > 0 || isSubmitting}
+                  onClick={handleClaim}
+                  className={`w-full py-3.5 rounded-2xl font-black text-sm transition flex items-center justify-center gap-2 shadow-lg ${
+                    secondsRemaining === 0
+                      ? 'bg-gradient-to-r from-emerald-500 to-teal-600 hover:from-emerald-600 hover:to-teal-700 text-white shadow-emerald-500/25 cursor-pointer animate-pulse'
+                      : 'bg-slate-200 text-slate-400 cursor-not-allowed shadow-none'
+                  }`}
+                >
+                  <Sparkles className="w-5 h-5 text-amber-300" />
+                  <span>
+                    {isSubmitting ? 'Crediting Coins...' : `2. Verify & Claim +${camp.rewardPerAction} Coins Now!`}
+                  </span>
+                </button>
+
+                {/* Re-open Link if needed */}
+                <div className="text-center">
+                  <button
+                    onClick={handleOpenLink}
+                    className="text-xs text-indigo-600 hover:underline font-medium inline-flex items-center gap-1 cursor-pointer"
+                  >
+                    <ExternalLink className="w-3 h-3" />
+                    <span>Re-open link if it did not open automatically</span>
+                  </button>
+                </div>
+
+              </div>
+            )}
+
+          </div>
+
+        </div>
 
       </div>
     </div>

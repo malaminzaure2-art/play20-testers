@@ -1,18 +1,21 @@
 import React from 'react';
 import { 
-  Play, 
+  TrendingUp, 
   ShieldCheck, 
   Lock, 
   FileText, 
   Mail, 
   Info, 
   DollarSign, 
-  Heart
+  Heart,
+  MessageCircle,
+  Sparkles,
+  Zap
 } from 'lucide-react';
 import { useApp } from '../context/AppContext';
 
 export const Footer: React.FC = () => {
-  const { setLegalModalType, setIsDeployGuideOpen } = useApp();
+  const { setLegalModalType, setIsDeployGuideOpen, setActiveTab } = useApp();
 
   return (
     <footer className="w-full border-t border-slate-200 bg-white mt-12 py-10 px-4 sm:px-6 lg:px-8">
@@ -22,50 +25,49 @@ export const Footer: React.FC = () => {
           {/* Col 1: Brand & Mission */}
           <div className="md:col-span-2 space-y-3">
             <div className="flex items-center gap-2.5">
-              <div className="flex h-8 w-8 items-center justify-center rounded-xl bg-indigo-600 text-white shadow-xs">
-                <Play className="h-4 w-4 fill-white translate-x-0.5" />
+              <div className="flex h-8 w-8 items-center justify-center rounded-xl bg-gradient-to-tr from-indigo-600 to-pink-500 text-white shadow-xs">
+                <TrendingUp className="h-4 w-4" />
               </div>
               <div className="flex items-center gap-1.5">
                 <span className="font-extrabold text-base tracking-tight text-slate-900">
-                  Play20
+                  TrendBoost
                 </span>
                 <span className="rounded-md bg-indigo-50 border border-indigo-100 px-1.5 py-0.2 text-[9px] font-bold text-indigo-700 uppercase">
-                  Testers
+                  Social Exchange
                 </span>
               </div>
             </div>
             
             <p className="text-xs text-slate-500 max-w-md leading-relaxed font-medium">
-              The premier reciprocal Android closed testing platform. Helping indie developers and mobile studios achieve 20 opt-in testers for 14 consecutive days to seamlessly unlock Google Play production access.
+              The leading organic social media growth and creator community engagement platform for TikTok, YouTube, Instagram, and Facebook. 100% real human activity and high-speed delivery.
             </p>
 
             <div className="flex items-center gap-2 text-[11px] text-slate-400">
               <ShieldCheck className="h-4 w-4 text-emerald-600" />
-              <span>100% Compliant with Google Play Developer Policies</span>
+              <span>100% Real Community Creators & Organic Engagement</span>
             </div>
           </div>
 
-          {/* Col 2: Developer Resources */}
+          {/* Col 2: Fast Navigation */}
           <div>
             <h4 className="text-xs font-bold uppercase tracking-wider text-slate-900 mb-3">
-              Developer Tools
+              Quick Navigation
             </h4>
             <ul className="space-y-2 text-xs">
               <li>
                 <button
-                  onClick={() => setLegalModalType('about')}
-                  className="text-slate-600 hover:text-indigo-600 transition-colors"
+                  onClick={() => setActiveTab('explore')}
+                  className="text-slate-600 hover:text-indigo-600 transition-colors cursor-pointer"
                 >
-                  How Play20 Works (Peer Testing)
+                  Social Growth Services
                 </button>
               </li>
               <li>
                 <button
-                  onClick={() => setLegalModalType('adsense')}
-                  className="text-slate-600 hover:text-indigo-600 transition-colors flex items-center gap-1"
+                  onClick={() => setActiveTab('campaigns')}
+                  className="text-slate-600 hover:text-indigo-600 transition-colors cursor-pointer"
                 >
-                  <span>AdSense Publisher Info</span>
-                  <span className="rounded bg-amber-100 text-amber-900 px-1.5 py-0.2 text-[9px] font-bold">New</span>
+                  My Active Orders
                 </button>
               </li>
             </ul>
@@ -74,22 +76,22 @@ export const Footer: React.FC = () => {
           {/* Col 3: Compliance & Legal */}
           <div>
             <h4 className="text-xs font-bold uppercase tracking-wider text-slate-900 mb-3">
-              Legal & Policies
+              Help & Policies
             </h4>
             <ul className="space-y-2 text-xs">
               <li>
                 <button
                   onClick={() => setLegalModalType('privacy')}
-                  className="text-slate-600 hover:text-indigo-600 transition-colors flex items-center gap-1.5"
+                  className="text-slate-600 hover:text-indigo-600 transition-colors flex items-center gap-1.5 cursor-pointer"
                 >
                   <Lock className="h-3.5 w-3.5 text-slate-400" />
-                  <span>Privacy Policy & Cookies</span>
+                  <span>Privacy Policy</span>
                 </button>
               </li>
               <li>
                 <button
                   onClick={() => setLegalModalType('terms')}
-                  className="text-slate-600 hover:text-indigo-600 transition-colors flex items-center gap-1.5"
+                  className="text-slate-600 hover:text-indigo-600 transition-colors flex items-center gap-1.5 cursor-pointer"
                 >
                   <FileText className="h-3.5 w-3.5 text-slate-400" />
                   <span>Terms of Service</span>
@@ -97,11 +99,20 @@ export const Footer: React.FC = () => {
               </li>
               <li>
                 <button
-                  onClick={() => setLegalModalType('contact')}
-                  className="text-slate-600 hover:text-indigo-600 transition-colors flex items-center gap-1.5"
+                  onClick={() => setLegalModalType('safety')}
+                  className="text-slate-600 hover:text-indigo-600 transition-colors flex items-center gap-1.5 cursor-pointer"
                 >
-                  <Mail className="h-3.5 w-3.5 text-slate-400" />
-                  <span>Contact & Support</span>
+                  <ShieldCheck className="h-3.5 w-3.5 text-slate-400" />
+                  <span>Safety & Rules</span>
+                </button>
+              </li>
+              <li>
+                <button
+                  onClick={() => setLegalModalType('contact')}
+                  className="text-slate-600 hover:text-indigo-600 transition-colors flex items-center gap-1.5 cursor-pointer"
+                >
+                  <MessageCircle className="h-3.5 w-3.5 text-slate-400" />
+                  <span>Contact Support (WhatsApp / Email)</span>
                 </button>
               </li>
             </ul>
@@ -111,11 +122,11 @@ export const Footer: React.FC = () => {
 
         {/* Bottom copyright */}
         <div className="pt-6 flex flex-col sm:flex-row items-center justify-between gap-3 text-[11px] text-slate-400">
-          <p>© {new Date().getFullYear()} Play20 Testers Platform. All rights reserved.</p>
+          <p>© {new Date().getFullYear()} TrendBoost Social Exchange Platform. All rights reserved.</p>
           <div className="flex items-center gap-4">
-            <button onClick={() => setLegalModalType('privacy')} className="hover:text-slate-700">Privacy</button>
-            <button onClick={() => setLegalModalType('terms')} className="hover:text-slate-700">Terms</button>
-            <button onClick={() => setLegalModalType('contact')} className="hover:text-slate-700">Support</button>
+            <button onClick={() => setLegalModalType('privacy')} className="hover:text-slate-700 cursor-pointer">Privacy</button>
+            <button onClick={() => setLegalModalType('terms')} className="hover:text-slate-700 cursor-pointer">Terms</button>
+            <button onClick={() => setLegalModalType('contact')} className="hover:text-slate-700 cursor-pointer">WhatsApp</button>
           </div>
         </div>
       </div>

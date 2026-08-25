@@ -1,271 +1,135 @@
 import React from 'react';
-import { 
-  Menu,
-  Play, 
-  Coins, 
-  PlusCircle, 
-  LogOut, 
-  Compass, 
-  CheckSquare, 
-  Layers, 
-  Gift
-} from 'lucide-react';
 import { useApp } from '../context/AppContext';
+import { 
+  PlusCircle, 
+  Menu, 
+  Sparkles, 
+  TrendingUp,
+  LogIn,
+  Zap
+} from 'lucide-react';
 
 export const Navbar: React.FC = () => {
-  const { 
-    user, 
-    activeTab, 
-    setActiveTab, 
-    signInWithGoogle, 
-    signOutUser, 
-    setIsAddAppModalOpen,
-    setIsReferralModalOpen,
-    setIsSidebarOpen,
+  const {
+    user,
+    activeTab,
+    setActiveTab,
     setIsAuthModalOpen,
-    addToast,
-    tasks
+    setIsCreateCampaignModalOpen,
+    setIsSidebarOpen,
   } = useApp();
 
-  const activeTasksCount = tasks.filter((t) => t.status === 'active').length;
-
-  const handleProtectedTab = (tab: 'tasks' | 'my-apps' | 'store') => {
-    if (!user) {
-      setIsAuthModalOpen(true);
-      addToast('info', 'Sign In Required', `Please sign in to access ${tab === 'tasks' ? 'your testing tasks' : tab === 'my-apps' ? 'your published apps' : 'the coins exchange'}.`);
-      return;
-    }
-    setActiveTab(tab);
-  };
-
-  const handleInviteClick = () => {
-    if (!user) {
-      setIsAuthModalOpen(true);
-      addToast('info', 'Sign In Required', 'Please sign in to get your referral link and earn +50 Coins.');
-      return;
-    }
-    setIsReferralModalOpen(true);
-  };
-
   return (
-    <header className="sticky top-0 z-40 w-full border-b border-slate-200 bg-white/95 backdrop-blur-md shadow-xs">
-      <div className="mx-auto flex h-16 max-w-7xl items-center justify-between px-4 sm:px-6 lg:px-8">
+    <header className="sticky top-0 z-40 bg-white/95 backdrop-blur-md border-b border-slate-200/80 shadow-xs">
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between gap-3">
         
-        {/* Left Side: Hamburger Menu Button + Logo */}
-        <div className="flex items-center gap-2 sm:gap-3">
-          {/* Hamburger Menu Toggle Button (Left on Desktop & Mobile) */}
+        {/* Left Side: Drawer Toggle + Brand Logo */}
+        <div className="flex items-center gap-3">
           <button
             id="btn-open-sidebar"
             onClick={() => setIsSidebarOpen(true)}
-            className="flex h-10 items-center gap-1.5 px-2.5 sm:px-3 rounded-xl border border-slate-200 bg-slate-50 hover:bg-slate-100 text-slate-700 hover:text-indigo-600 transition-all shadow-xs active:scale-95 group"
-            title="Open Main Menu (Sidebar)"
+            className="p-2 rounded-xl text-slate-600 hover:text-indigo-600 hover:bg-indigo-50/70 border border-slate-200/70 transition cursor-pointer"
+            title="Menu"
+            aria-label="Open Navigation Menu"
           >
-            <Menu className="h-5 w-5 text-slate-700 group-hover:text-indigo-600 transition-colors" />
-            <span className="hidden sm:inline text-xs font-bold text-slate-700 group-hover:text-indigo-600">Menu</span>
+            <Menu className="w-5 h-5" />
           </button>
 
-          {/* Brand Logo */}
-          <button 
-            id="brand-logo-btn"
+          <button
             onClick={() => setActiveTab('explore')}
-            className="flex items-center gap-2 text-left group transition-transform active:scale-95"
+            className="flex items-center gap-2.5 text-left group cursor-pointer focus:outline-hidden"
           >
-            <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-indigo-600 text-white shadow-xs shadow-indigo-200">
-              <Play className="h-4 w-4 fill-white translate-x-0.5" />
+            <div className="w-10 h-10 rounded-xl bg-gradient-to-tr from-indigo-600 via-purple-600 to-pink-500 flex items-center justify-center text-white shadow-sm shadow-indigo-500/20 group-hover:scale-105 transition-transform duration-200">
+              <TrendingUp className="w-5 h-5" />
             </div>
-            <div className="hidden xs:block">
+            <div>
               <div className="flex items-center gap-1.5">
-                <span className="font-extrabold text-base tracking-tight text-slate-900 group-hover:text-indigo-600 transition-colors">
-                  Play20
+                <span className="font-bold text-lg tracking-tight text-slate-900 leading-none">
+                  Trend<span className="text-indigo-600">Boost</span>
                 </span>
-                <span className="rounded-md bg-indigo-50 border border-indigo-100 px-1.5 py-0.2 text-[9px] font-bold text-indigo-700 uppercase">
-                  Testers
+                <span className="text-[10px] uppercase font-bold tracking-wider px-1.5 py-0.5 rounded-full bg-indigo-100 text-indigo-700">
+                  Global Pro
                 </span>
               </div>
-              <p className="text-[10px] text-slate-500 font-medium leading-none">
-                20 Testers • 14 Days
+              <p className="text-[11px] text-slate-500 hidden sm:block">
+                TikTok, YouTube, IG & FB Boosting
               </p>
             </div>
           </button>
         </div>
 
-        {/* Center: Clean Primary Navigation Tabs (Desktop) */}
-        <nav className="hidden lg:flex items-center gap-1 bg-slate-100/90 p-1 rounded-xl border border-slate-200/80 shadow-inner">
+        {/* Center: Desktop Navigation Tabs */}
+        <nav className="hidden md:flex items-center gap-1 bg-slate-100/80 p-1 rounded-xl border border-slate-200/60">
           <button
             id="nav-tab-explore"
             onClick={() => setActiveTab('explore')}
-            className={`flex items-center gap-2 px-3.5 py-1.5 rounded-lg text-xs font-semibold transition-all ${
+            className={`px-3.5 py-1.5 rounded-lg text-xs font-semibold transition cursor-pointer flex items-center gap-1.5 ${
               activeTab === 'explore'
-                ? 'bg-white text-indigo-700 shadow-xs border border-slate-200/80 font-bold'
-                : 'text-slate-600 hover:text-slate-900 hover:bg-slate-200/60'
+                ? 'bg-white text-indigo-700 shadow-xs'
+                : 'text-slate-600 hover:text-slate-900'
             }`}
           >
-            <Compass className="h-3.5 w-3.5 text-indigo-600" />
-            Explore Apps
+            <Sparkles className="w-3.5 h-3.5 text-indigo-600" />
+            Services & Rates
           </button>
 
           <button
-            id="nav-tab-tasks"
-            onClick={() => handleProtectedTab('tasks')}
-            className={`relative flex items-center gap-2 px-3.5 py-1.5 rounded-lg text-xs font-semibold transition-all ${
-              activeTab === 'tasks'
-                ? 'bg-white text-indigo-700 shadow-xs border border-slate-200/80 font-bold'
-                : 'text-slate-600 hover:text-slate-900 hover:bg-slate-200/60'
+            id="nav-tab-campaigns"
+            onClick={() => setActiveTab('campaigns')}
+            className={`px-3.5 py-1.5 rounded-lg text-xs font-semibold transition cursor-pointer flex items-center gap-1.5 ${
+              activeTab === 'campaigns'
+                ? 'bg-white text-indigo-700 shadow-xs'
+                : 'text-slate-600 hover:text-slate-900'
             }`}
           >
-            <CheckSquare className="h-3.5 w-3.5 text-indigo-600" />
-            My Tasks
-            {activeTasksCount > 0 && (
-              <span className="flex h-4 min-w-4 items-center justify-center rounded-full bg-emerald-100 text-emerald-800 px-1 text-[10px] font-bold border border-emerald-200">
-                {activeTasksCount}
-              </span>
-            )}
-          </button>
-
-          <button
-            id="nav-tab-my-apps"
-            onClick={() => handleProtectedTab('my-apps')}
-            className={`flex items-center gap-2 px-3.5 py-1.5 rounded-lg text-xs font-semibold transition-all ${
-              activeTab === 'my-apps'
-                ? 'bg-white text-indigo-700 shadow-xs border border-slate-200/80 font-bold'
-                : 'text-slate-600 hover:text-slate-900 hover:bg-slate-200/60'
-            }`}
-          >
-            <Layers className="h-3.5 w-3.5 text-indigo-600" />
-            My Apps
+            <PlusCircle className="w-3.5 h-3.5 text-indigo-500" />
+            My Orders
           </button>
         </nav>
 
-        {/* Right Side: Action Bar */}
-        <div className="flex items-center gap-1.5 sm:gap-2.5">
+        {/* Right Side: Place Order CTA, Auth */}
+        <div className="flex items-center gap-2.5">
           
-          {/* Invite & Earn Button (Desktop/Tablet) */}
+          {/* Create Promotion CTA Button */}
           <button
-            onClick={handleInviteClick}
-            className="hidden sm:flex items-center gap-1.5 rounded-xl border border-indigo-200 bg-indigo-50/80 hover:bg-indigo-100 text-indigo-700 px-2.5 sm:px-3 py-1.5 text-xs font-bold transition-all shadow-xs active:scale-95"
-            title="Invite friends and get +50 free Coins"
+            id="btn-create-campaign-nav"
+            onClick={() => setIsCreateCampaignModalOpen(true)}
+            className="bg-gradient-to-r from-indigo-600 via-purple-600 to-pink-600 hover:from-indigo-500 hover:to-pink-500 text-white text-xs sm:text-sm font-bold px-4 py-2.5 rounded-xl shadow-md shadow-indigo-500/20 hover:shadow-lg transition flex items-center gap-2 cursor-pointer transform hover:-translate-y-0.5 active:translate-y-0"
           >
-            <Gift className="h-3.5 w-3.5 text-indigo-600" />
-            <span>Invite</span>
-            <span className="rounded bg-indigo-600 text-white text-[10px] font-bold px-1.5 py-0.2">
-              +50
-            </span>
+            <Zap className="w-4 h-4 text-amber-300 fill-amber-300" />
+            <span className="hidden sm:inline">+ Place Promotion Order</span>
+            <span className="sm:hidden">+ Order</span>
           </button>
 
+          {/* User Profile / Login */}
           {user ? (
-            <>
-              {/* Credit Balance Badge */}
-              <button 
-                id="user-balance-badge"
-                onClick={() => setActiveTab('store')}
-                className="flex items-center gap-1 sm:gap-1.5 rounded-xl border border-amber-200 bg-amber-50/80 px-2 sm:px-3 py-1.5 hover:border-amber-300 hover:bg-amber-100/80 transition-all shadow-xs active:scale-95"
-                title="Your Coins Balance (Click to buy more)"
-              >
-                <Coins className="h-3.5 w-3.5 text-amber-600 fill-amber-400" />
-                <span className="text-xs font-extrabold text-amber-900">
-                  {user.credits}
-                </span>
-              </button>
-
-              {/* Submit App CTA */}
+            <div className="relative group">
               <button
-                id="btn-add-app-nav"
-                onClick={() => setIsAddAppModalOpen(true)}
-                className="flex items-center gap-1 sm:gap-1.5 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white px-2.5 sm:px-3.5 py-1.5 text-xs font-bold shadow-xs shadow-indigo-200 transition-all active:scale-95"
+                onClick={() => setIsSidebarOpen(true)}
+                className="w-9 h-9 rounded-xl overflow-hidden border-2 border-indigo-200 focus:outline-hidden hover:scale-105 transition cursor-pointer"
+                title={user.displayName}
               >
-                <PlusCircle className="h-3.5 w-3.5" />
-                <span className="hidden sm:inline">ADD YOUR APP</span>
-                <span className="sm:hidden">Add App</span>
+                <img
+                  src={user.photoURL || `https://api.dicebear.com/7.x/bottts/svg?seed=${user.uid}`}
+                  alt={user.displayName}
+                  referrerPolicy="no-referrer"
+                  className="w-full h-full object-cover"
+                />
               </button>
-
-              {/* User Avatar & Drawer Trigger */}
-              <div className="flex items-center gap-1 sm:gap-1.5 pl-1 sm:pl-1.5 border-l border-slate-200">
-                <button
-                  onClick={() => setIsSidebarOpen(true)}
-                  className="relative group transition-transform active:scale-95"
-                  title="Click to view Profile & Menu"
-                >
-                  <img
-                    src={user.photoURL || 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=100&auto=format&fit=crop&q=80'}
-                    alt={user.displayName}
-                    className="h-8 w-8 rounded-full object-cover ring-1 ring-slate-200 group-hover:ring-indigo-400"
-                  />
-                  <span className="absolute -bottom-0.5 -right-0.5 flex h-3.5 w-3.5 items-center justify-center rounded-full bg-emerald-500 text-white text-[7px] font-bold" title="Verified Tester">
-                    ✓
-                  </span>
-                </button>
-                <button
-                  id="btn-signout"
-                  onClick={signOutUser}
-                  title="Sign Out"
-                  className="hidden md:flex rounded-lg p-1.5 text-slate-400 hover:bg-slate-100 hover:text-slate-700 transition-colors"
-                >
-                  <LogOut className="h-3.5 w-3.5" />
-                </button>
-              </div>
-            </>
+            </div>
           ) : (
             <button
-              id="btn-signin-nav"
+              id="btn-login-nav"
               onClick={() => setIsAuthModalOpen(true)}
-              className="flex items-center gap-2 rounded-xl bg-slate-900 hover:bg-slate-800 text-white px-3.5 py-1.5 text-xs font-bold shadow-xs transition-all active:scale-95"
+              className="bg-slate-900 hover:bg-slate-800 text-white text-xs font-semibold px-3.5 py-2 rounded-xl transition flex items-center gap-1.5 cursor-pointer"
             >
-              <span>Sign In / Register</span>
+              <LogIn className="w-3.5 h-3.5" />
+              <span>Sign In</span>
             </button>
           )}
+
         </div>
-      </div>
 
-      {/* Native Mobile App Fixed Bottom Navigation Bar */}
-      <div className="lg:hidden fixed bottom-0 left-0 right-0 z-40 bg-white/95 backdrop-blur-md border-t border-slate-200 px-3 py-1.5 shadow-lg flex items-center justify-around">
-        {/* Menu on the FAR LEFT on mobile bottom bar too */}
-        <button
-          id="mobile-bottom-menu-btn"
-          onClick={() => setIsSidebarOpen(true)}
-          className="flex flex-col items-center gap-0.5 py-1 px-3 rounded-xl text-slate-600 hover:text-indigo-600 transition-all active:scale-95"
-        >
-          <Menu className="h-4 w-4" />
-          <span className="text-[10px] font-semibold tracking-tight">Menu</span>
-        </button>
-
-        <button
-          onClick={() => setActiveTab('explore')}
-          className={`flex flex-col items-center gap-0.5 py-1 px-3 rounded-xl transition-all active:scale-95 ${
-            activeTab === 'explore' 
-              ? 'text-indigo-600 bg-indigo-50 font-bold' 
-              : 'text-slate-500 hover:text-slate-800'
-          }`}
-        >
-          <Compass className="h-4 w-4" />
-          <span className="text-[10px] tracking-tight">Explore</span>
-        </button>
-
-        <button
-          onClick={() => handleProtectedTab('tasks')}
-          className={`relative flex flex-col items-center gap-0.5 py-1 px-3 rounded-xl transition-all active:scale-95 ${
-            activeTab === 'tasks' 
-              ? 'text-indigo-600 bg-indigo-50 font-bold' 
-              : 'text-slate-500 hover:text-slate-800'
-          }`}
-        >
-          <CheckSquare className="h-4 w-4" />
-          <span className="text-[10px] tracking-tight">Tasks</span>
-          {activeTasksCount > 0 && (
-            <span className="absolute top-0.5 right-2 flex h-2 w-2 rounded-full bg-emerald-500 ring-2 ring-white" />
-          )}
-        </button>
-
-        <button
-          onClick={() => handleProtectedTab('my-apps')}
-          className={`flex flex-col items-center gap-0.5 py-1 px-3 rounded-xl transition-all active:scale-95 ${
-            activeTab === 'my-apps' 
-              ? 'text-indigo-600 bg-indigo-50 font-bold' 
-              : 'text-slate-500 hover:text-slate-800'
-          }`}
-        >
-          <Layers className="h-4 w-4" />
-          <span className="text-[10px] tracking-tight">My Apps</span>
-        </button>
       </div>
     </header>
   );

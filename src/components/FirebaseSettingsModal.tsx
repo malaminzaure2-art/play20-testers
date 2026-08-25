@@ -25,13 +25,13 @@ export const FirebaseSettingsModal: React.FC = () => {
 
   const handleSaveConfig = (e: React.FormEvent) => {
     e.preventDefault();
-    addToast('success', 'Firebase Credentials Saved', 'Updated local environment bridge configuration.');
+    addToast('success', 'Firebase Credentials Saved', 'Firebase configuration saved successfully.');
     setIsFirebaseModalOpen(false);
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/60 backdrop-blur-sm p-4 overflow-y-auto">
-      <div className="relative w-full max-w-2xl rounded-3xl border border-slate-200 bg-white p-6 sm:p-8 shadow-2xl my-8">
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/60 backdrop-blur-xs p-4 overflow-y-auto">
+      <div className="relative w-full max-w-2xl rounded-3xl border border-slate-200 bg-white p-6 sm:p-8 shadow-2xl my-8 animate-fadeIn">
         
         {/* Header */}
         <div className="flex items-center justify-between border-b border-slate-100 pb-4">
@@ -40,14 +40,14 @@ export const FirebaseSettingsModal: React.FC = () => {
               <Database className="h-5 w-5" />
             </div>
             <div>
-              <h3 className="text-base font-bold text-slate-900">Firebase Auth & Firestore Integration</h3>
-              <p className="text-xs text-slate-500 font-medium">Database collections architecture & credentials</p>
+              <h3 className="text-base font-bold text-slate-900">Firebase Firestore & Auth Sync</h3>
+              <p className="text-xs text-slate-500 font-medium">Cloud database architecture and synchronization</p>
             </div>
           </div>
 
           <button
             onClick={() => setIsFirebaseModalOpen(false)}
-            className="rounded-lg p-1.5 text-slate-400 hover:bg-slate-100 hover:text-slate-700 transition-colors"
+            className="rounded-lg p-1.5 text-slate-400 hover:bg-slate-100 hover:text-slate-700 transition-colors cursor-pointer"
           >
             ✕
           </button>
@@ -63,30 +63,30 @@ export const FirebaseSettingsModal: React.FC = () => {
 
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-xs">
               <div className="rounded-xl border border-slate-200 bg-white p-3 shadow-xs">
-                <div className="font-mono font-bold text-indigo-700">users / {`{uid}`}</div>
+                <div className="font-mono font-bold text-indigo-700">trendboost_users / {`{uid}`}</div>
                 <p className="text-[11px] text-slate-500 mt-1">
-                  uid, email, displayName, photoURL, credits, joinedAt, role
+                  uid, email, displayName, photoURL, credits, dailyStreak, role
                 </p>
               </div>
 
               <div className="rounded-xl border border-slate-200 bg-white p-3 shadow-xs">
-                <div className="font-mono font-bold text-emerald-700">apps / {`{appId}`}</div>
+                <div className="font-mono font-bold text-emerald-700">trendboost_campaigns / {`{id}`}</div>
                 <p className="text-[11px] text-slate-500 mt-1">
-                  appId, ownerId, title, groupUrl, storeUrl, requiredTesters, currentTesters, active
+                  platform, actionType, title, targetUrl, rewardPerAction, deliveredCount
                 </p>
               </div>
 
               <div className="rounded-xl border border-slate-200 bg-white p-3 shadow-xs">
-                <div className="font-mono font-bold text-teal-700">tasks / {`{taskId}`}</div>
+                <div className="font-mono font-bold text-teal-700">trendboost_tasks / {`{id}`}</div>
                 <p className="text-[11px] text-slate-500 mt-1">
-                  taskId, userId, appId, startDate, dayCount, status, lastFeedbackDate
+                  userId, campaignId, coinsEarned, completedAt, status
                 </p>
               </div>
 
               <div className="rounded-xl border border-slate-200 bg-white p-3 shadow-xs">
-                <div className="font-mono font-bold text-amber-800">proofs / {`{proofId}`}</div>
+                <div className="font-mono font-bold text-amber-800">trendboost_referrals / {`{id}`}</div>
                 <p className="text-[11px] text-slate-500 mt-1">
-                  proofId, taskId, rating, feedback (min 50 chars), screenshotUrl, device, verified
+                  referrerId, referredUserId, coinsRewarded, createdAt
                 </p>
               </div>
             </div>
@@ -96,7 +96,7 @@ export const FirebaseSettingsModal: React.FC = () => {
           <form onSubmit={handleSaveConfig} className="space-y-3">
             <h4 className="text-xs font-bold text-slate-900 flex items-center gap-1.5 pt-2">
               <Key className="h-3.5 w-3.5 text-amber-600" />
-              <span>Configure Firebase Keys (Optional / Custom Project)</span>
+              <span>Firebase API Keys & Config (Optional / Custom Project)</span>
             </h4>
 
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
@@ -106,7 +106,7 @@ export const FirebaseSettingsModal: React.FC = () => {
                   type="text"
                   value={apiKey}
                   onChange={(e) => setApiKey(e.target.value)}
-                  className="w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-xs font-mono text-slate-900 focus:outline-none focus:border-indigo-500 shadow-xs"
+                  className="w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-xs font-mono text-slate-900 focus:outline-hidden focus:border-indigo-500 shadow-xs"
                 />
               </div>
 
@@ -116,7 +116,7 @@ export const FirebaseSettingsModal: React.FC = () => {
                   type="text"
                   value={projectId}
                   onChange={(e) => setProjectId(e.target.value)}
-                  className="w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-xs font-mono text-slate-900 focus:outline-none focus:border-indigo-500 shadow-xs"
+                  className="w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-xs font-mono text-slate-900 focus:outline-hidden focus:border-indigo-500 shadow-xs"
                 />
               </div>
 
@@ -126,7 +126,7 @@ export const FirebaseSettingsModal: React.FC = () => {
                   type="text"
                   value={authDomain}
                   onChange={(e) => setAuthDomain(e.target.value)}
-                  className="w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-xs font-mono text-slate-900 focus:outline-none focus:border-indigo-500 shadow-xs"
+                  className="w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-xs font-mono text-slate-900 focus:outline-hidden focus:border-indigo-500 shadow-xs"
                 />
               </div>
 
@@ -136,7 +136,7 @@ export const FirebaseSettingsModal: React.FC = () => {
                   type="text"
                   value={storageBucket}
                   onChange={(e) => setStorageBucket(e.target.value)}
-                  className="w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-xs font-mono text-slate-900 focus:outline-none focus:border-indigo-500 shadow-xs"
+                  className="w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-xs font-mono text-slate-900 focus:outline-hidden focus:border-indigo-500 shadow-xs"
                 />
               </div>
             </div>
@@ -145,13 +145,13 @@ export const FirebaseSettingsModal: React.FC = () => {
               <button
                 type="button"
                 onClick={() => setIsFirebaseModalOpen(false)}
-                className="rounded-xl border border-slate-200 bg-white px-4 py-2 text-xs font-semibold text-slate-600 hover:bg-slate-50"
+                className="rounded-xl border border-slate-200 bg-white px-4 py-2 text-xs font-semibold text-slate-600 hover:bg-slate-50 cursor-pointer"
               >
                 Cancel
               </button>
               <button
                 type="submit"
-                className="rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white font-bold px-5 py-2 text-xs transition-all shadow-xs"
+                className="rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white font-bold px-5 py-2 text-xs transition-all shadow-xs cursor-pointer"
               >
                 Save & Connect
               </button>

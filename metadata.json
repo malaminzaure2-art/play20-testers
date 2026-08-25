@@ -1,6 +1,6 @@
 {
-  "name": "Play20 Testers Exchange",
-  "description": "Google Play Closed Testing & Feedback Exchange platform helping Android developers meet the 20-tester / 14-day requirement with active verification and reward credits.",
+  "name": "TrendBoost - Social Media Growth & Exchange",
+  "description": "Smart coin-based social media boosting and engagement exchange platform for TikTok, YouTube, Instagram, Facebook, and Telegram.",
   "requestFramePermissions": [],
   "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
 }

@@ -8,7 +8,7 @@ import {
   browserSessionPersistence, 
   inMemoryPersistence 
 } from 'firebase/auth';
-import { getFirestore, Firestore } from 'firebase/firestore';
+import { getFirestore, initializeFirestore, Firestore } from 'firebase/firestore';
 
 export interface FirebaseClientConfig {
   apiKey: string;
@@ -54,24 +54,30 @@ export function initFirebase(customConfig?: Partial<FirebaseClientConfig>) {
       setPersistence(auth, browserLocalPersistence)
         .catch(() => setPersistence(auth!, browserSessionPersistence))
         .catch(() => setPersistence(auth!, inMemoryPersistence))
-        .catch((e) => console.warn('Auth persistence notice:', e));
+        .catch(() => {});
 
       googleProvider = new GoogleAuthProvider();
       googleProvider.setCustomParameters({ prompt: 'select_account' });
     } catch (e) {
-      console.warn("Auth initialization notice:", e);
+      // Auth fallback
     }
 
     try {
-      db = getFirestore(app);
+      // Use auto-detect long polling to prevent WebContainer/iframe WebSocket issues
+      db = initializeFirestore(app, {
+        experimentalAutoDetectLongPolling: true,
+      });
     } catch (e) {
-      console.warn("Firestore fallback notice:", e);
+      try {
+        db = getFirestore(app);
+      } catch (err) {
+        db = null;
+      }
     }
 
     isFirebaseLive = true;
     return { app, auth, db, googleProvider, isLive: true };
   } catch (error) {
-    console.warn("Running in enhanced client storage mode:", error);
     isFirebaseLive = false;
     return { app: null, auth: null, db: null, googleProvider: null, isLive: false };
   }

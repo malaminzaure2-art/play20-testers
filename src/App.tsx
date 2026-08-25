@@ -2,7 +2,7 @@ import React from 'react';
 import { AppProvider, useApp } from './context/AppContext';
 import { Navbar } from './components/Navbar';
 import { SidebarDrawer } from './components/SidebarDrawer';
-import { ExploreAppsTab } from './components/ExploreAppsTab';
+import { ExploreBoostsTab } from './components/ExploreBoostsTab';
 import { MyTasksTab } from './components/MyTasksTab';
 import { MyAppsTab } from './components/MyAppsTab';
 import { BuyCreditsTab } from './components/BuyCreditsTab';
@@ -33,13 +33,13 @@ const MainContent: React.FC = () => {
 
       {/* Main Container */}
       <main className="flex-1">
-        {activeTab === 'explore' && <ExploreAppsTab />}
+        {activeTab === 'explore' && <ExploreBoostsTab />}
+        {activeTab === 'campaigns' && <MyAppsTab />}
         {activeTab === 'tasks' && <MyTasksTab />}
-        {activeTab === 'my-apps' && <MyAppsTab />}
         {activeTab === 'store' && <BuyCreditsTab />}
       </main>
 
-      {/* Footer with AdSense Policy Links */}
+      {/* Footer with Policy Links */}
       <Footer />
 
       {/* Modals & Portals */}

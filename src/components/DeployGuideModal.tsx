@@ -1,263 +1,136 @@
-import React, { useState } from 'react';
-import { 
-  Github, 
-  Terminal, 
-  Globe, 
-  Copy, 
-  Check, 
-  ExternalLink, 
-  Layers, 
-  ShieldCheck, 
-  Database,
-  ArrowRight
-} from 'lucide-react';
+import React from 'react';
 import { useApp } from '../context/AppContext';
-import { EXPORTED_FIREBASE_CONFIG_JS, EXPORTED_FIRESTORE_RULES } from '../firebase/config';
+import { 
+  X, 
+  BookOpen, 
+  CheckCircle2, 
+  Sparkles, 
+  TrendingUp, 
+  ShieldCheck, 
+  Zap, 
+  Users,
+  Play,
+  Heart,
+  UserPlus
+} from 'lucide-react';
 
 export const DeployGuideModal: React.FC = () => {
-  const { isDeployGuideOpen, setIsDeployGuideOpen, addToast } = useApp();
-  const [activeGuideTab, setActiveGuideTab] = useState<'git' | 'vercel' | 'netlify' | 'firebase'>('git');
-  const [copiedSection, setCopiedSection] = useState<string | null>(null);
+  const { isDeployGuideOpen, setIsDeployGuideOpen, setActiveTab } = useApp();
 
   if (!isDeployGuideOpen) return null;
 
-  const copyToClipboard = (text: string, label: string) => {
-    navigator.clipboard.writeText(text);
-    setCopiedSection(label);
-    addToast('success', 'Copied to Clipboard', `${label} copied successfully.`);
-    setTimeout(() => setCopiedSection(null), 2500);
-  };
-
-  const GIT_COMMANDS = `# 1. Initialize local git repository
-git init
-
-# 2. Add all production files to staging
-git add .
-
-# 3. Create initial commit
-git commit -m "Initial commit: Play20 Closed Testing & Feedback Exchange platform"
-
-# 4. Rename default branch to main
-git branch -M main
-
-# 5. Connect your GitHub remote repository (replace with your repo URL)
-git remote add origin https://github.com/YOUR_GITHUB_USERNAME/play20-testing-exchange.git
-
-# 6. Push codebase to GitHub
-git push -u origin main
-`;
-
-  const VERCEL_STEPS = `# Option A: Deploy via Vercel CLI (Instant)
-npm i -g vercel
-vercel
-
-# Option B: Deploy via Vercel Web Dashboard (Recommended for CI/CD)
-# 1. Open https://vercel.com/new and sign in with GitHub.
-# 2. Click "Import" next to your 'play20-testing-exchange' repository.
-# 3. Configure Framework Preset: 'Vite'
-# 4. Build Command: 'npm run build'
-# 5. Output Directory: 'dist'
-# 6. Under 'Environment Variables', add:
-#    VITE_FIREBASE_API_KEY=your_api_key
-#    VITE_FIREBASE_PROJECT_ID=your_project_id
-# 7. Click "Deploy". Your site is live on *.vercel.app!
-`;
-
-  const NETLIFY_STEPS = `# Option A: Deploy via Netlify CLI
-npm i -g netlify-cli
-netlify deploy --prod --dir=dist
-
-# Option B: Deploy via Netlify Dashboard
-# 1. Open https://app.netlify.com and click "Add new site" -> "Import an existing project".
-# 2. Select GitHub and authorize your repository.
-# 3. Build settings:
-#    - Base directory: (leave empty)
-#    - Build command: npm run build
-#    - Publish directory: dist
-# 4. Under Site configuration -> Domain management:
-#    - Click "Add custom domain" (e.g. play20exchange.com)
-#    - Add CNAME record pointing to your Netlify site.
-`;
-
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/60 backdrop-blur-sm p-4 overflow-y-auto">
-      <div className="relative w-full max-w-3xl rounded-3xl border border-slate-200 bg-white p-6 sm:p-8 shadow-2xl my-8">
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-xs animate-fadeIn">
+      <div className="bg-white rounded-3xl max-w-2xl w-full overflow-hidden shadow-2xl border border-slate-200 flex flex-col max-h-[90vh]">
         
         {/* Header */}
-        <div className="flex items-center justify-between border-b border-slate-100 pb-4">
-          <div className="flex items-center gap-3">
-            <div className="h-10 w-10 rounded-xl bg-slate-100 border border-slate-200 flex items-center justify-center text-slate-800">
-              <Github className="h-5 w-5" />
+        <div className="p-5 border-b border-slate-100 flex items-center justify-between bg-slate-50/70">
+          <div className="flex items-center gap-2.5">
+            <div className="w-10 h-10 rounded-xl bg-gradient-to-tr from-purple-600 to-indigo-600 flex items-center justify-center text-white font-bold shadow-xs">
+              <BookOpen className="w-5 h-5" />
             </div>
             <div>
-              <h3 className="text-base font-bold text-slate-900">GitHub Setup & Production Deployment</h3>
-              <p className="text-xs text-slate-500 font-medium">Step-by-step commands for GitHub, Vercel, Netlify & Firebase</p>
+              <h3 className="font-extrabold text-base text-slate-900 leading-tight">
+                How TrendBoost Works (User Guide)
+              </h3>
+              <p className="text-xs text-slate-500">
+                Learn how to grow your TikTok, YouTube, Instagram, and Facebook profiles effortlessly
+              </p>
             </div>
           </div>
 
           <button
             onClick={() => setIsDeployGuideOpen(false)}
-            className="rounded-lg p-1.5 text-slate-400 hover:bg-slate-100 hover:text-slate-700 transition-colors"
+            className="p-1.5 rounded-lg text-slate-400 hover:text-slate-700 hover:bg-slate-200/60 transition cursor-pointer"
           >
-            ✕
+            <X className="w-5 h-5" />
           </button>
         </div>
 
-        {/* Tab Switcher */}
-        <div className="mt-5 flex items-center gap-1.5 border-b border-slate-100 pb-3 overflow-x-auto">
-          <button
-            onClick={() => setActiveGuideTab('git')}
-            className={`flex items-center gap-2 px-3.5 py-1.5 rounded-xl text-xs font-bold transition-all ${
-              activeGuideTab === 'git'
-                ? 'bg-indigo-600 text-white shadow-xs'
-                : 'text-slate-600 hover:bg-slate-100 hover:text-slate-900'
-            }`}
-          >
-            <Terminal className="h-4 w-4" />
-            1. Git & GitHub Setup
-          </button>
-
-          <button
-            onClick={() => setActiveGuideTab('vercel')}
-            className={`flex items-center gap-2 px-3.5 py-1.5 rounded-xl text-xs font-bold transition-all ${
-              activeGuideTab === 'vercel'
-                ? 'bg-indigo-600 text-white shadow-xs'
-                : 'text-slate-600 hover:bg-slate-100 hover:text-slate-900'
-            }`}
-          >
-            <Globe className="h-4 w-4" />
-            2. Vercel & Netlify
-          </button>
-
-          <button
-            onClick={() => setActiveGuideTab('firebase')}
-            className={`flex items-center gap-2 px-3.5 py-1.5 rounded-xl text-xs font-bold transition-all ${
-              activeGuideTab === 'firebase'
-                ? 'bg-indigo-600 text-white shadow-xs'
-                : 'text-slate-600 hover:bg-slate-100 hover:text-slate-900'
-            }`}
-          >
-            <Database className="h-4 w-4" />
-            3. Firebase Config & Rules
-          </button>
-        </div>
-
-        {/* Tab Content */}
-        <div className="mt-5">
+        {/* Body */}
+        <div className="p-6 space-y-6 overflow-y-auto flex-1 text-slate-700 text-xs sm:text-sm leading-relaxed">
           
-          {/* Tab 1: Git Commands */}
-          {activeGuideTab === 'git' && (
-            <div className="space-y-4">
-              <div className="flex items-center justify-between">
-                <span className="text-xs text-slate-700 font-medium">
-                  Run these sequential terminal commands in your project root:
-                </span>
-                <button
-                  onClick={() => copyToClipboard(GIT_COMMANDS, 'Git commands')}
-                  className="flex items-center gap-1.5 rounded-lg border border-slate-300 bg-white px-3 py-1 text-xs font-bold text-slate-700 hover:bg-slate-50 shadow-xs"
-                >
-                  {copiedSection === 'Git commands' ? <Check className="h-3.5 w-3.5 text-emerald-600" /> : <Copy className="h-3.5 w-3.5" />}
-                  <span>{copiedSection === 'Git commands' ? 'Copied!' : 'Copy Script'}</span>
-                </button>
+          {/* Section 1 */}
+          <div className="space-y-2">
+            <div className="flex items-center gap-2 font-bold text-slate-900 text-sm">
+              <span className="w-6 h-6 rounded-full bg-indigo-100 text-indigo-700 flex items-center justify-center text-xs font-black">1</span>
+              <span>What is TrendBoost and how does it work?</span>
+            </div>
+            <p className="text-slate-600 pl-8">
+              <strong>TrendBoost</strong> is a genuine creator community engagement exchange. If you manage accounts across <strong>TikTok, YouTube, Instagram, Facebook, or Telegram</strong>, you can connect with real users who will Follow, Like, View, and Subscribe to your content safely and organically.
+            </p>
+          </div>
+
+          {/* Section 2 */}
+          <div className="space-y-2">
+            <div className="flex items-center gap-2 font-bold text-slate-900 text-sm">
+              <span className="w-6 h-6 rounded-full bg-amber-100 text-amber-800 flex items-center justify-center text-xs font-black">2</span>
+              <span>Two (2) Ways to Utilize the Platform:</span>
+            </div>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pl-8">
+              <div className="p-3.5 rounded-2xl bg-amber-50/60 border border-amber-200 space-y-1.5">
+                <div className="font-bold text-amber-900 flex items-center gap-1.5">
+                  <span>🪙</span>
+                  <span>A: Free Organic Growth</span>
+                </div>
+                <p className="text-xs text-slate-600">
+                  Head over to the <strong>"Earn Coins"</strong> tab to like, follow, and engage with other creators' accounts to accumulate coins, then spend those coins to boost your own content.
+                </p>
               </div>
 
-              <div className="rounded-2xl border border-slate-800 bg-slate-950 p-4 font-mono text-xs text-emerald-400 overflow-x-auto shadow-inner">
-                <pre>{GIT_COMMANDS}</pre>
+              <div className="p-3.5 rounded-2xl bg-indigo-50/60 border border-indigo-200 space-y-1.5">
+                <div className="font-bold text-indigo-900 flex items-center gap-1.5">
+                  <span>⚡</span>
+                  <span>B: Instant Coin Packages</span>
+                </div>
+                <p className="text-xs text-slate-600">
+                  If you prefer instant results without manual tasking, navigate to the <strong>"Buy Coins"</strong> tab to purchase coin packages and launch viral campaigns immediately.
+                </p>
               </div>
             </div>
-          )}
+          </div>
 
-          {/* Tab 2: Vercel & Netlify */}
-          {activeGuideTab === 'vercel' && (
-            <div className="space-y-4">
-              
-              {/* Vercel Section */}
-              <div className="rounded-2xl border border-slate-200 bg-slate-50 p-4">
-                <div className="flex items-center justify-between mb-2">
-                  <div className="flex items-center gap-2">
-                    <span className="text-xs font-bold text-slate-900">Vercel Deployment & Custom Domain</span>
-                  </div>
-                  <button
-                    onClick={() => copyToClipboard(VERCEL_STEPS, 'Vercel steps')}
-                    className="flex items-center gap-1 text-[11px] font-bold text-indigo-600 hover:underline"
-                  >
-                    <Copy className="h-3 w-3" />
-                    <span>Copy Instructions</span>
-                  </button>
-                </div>
-                <pre className="font-mono text-xs text-slate-700 overflow-x-auto whitespace-pre-wrap">
-                  {VERCEL_STEPS}
-                </pre>
-              </div>
-
-              {/* Netlify Section */}
-              <div className="rounded-2xl border border-slate-200 bg-slate-50 p-4">
-                <div className="flex items-center justify-between mb-2">
-                  <div className="flex items-center gap-2">
-                    <span className="text-xs font-bold text-slate-900">Netlify Deployment</span>
-                  </div>
-                  <button
-                    onClick={() => copyToClipboard(NETLIFY_STEPS, 'Netlify steps')}
-                    className="flex items-center gap-1 text-[11px] font-bold text-indigo-600 hover:underline"
-                  >
-                    <Copy className="h-3 w-3" />
-                    <span>Copy Instructions</span>
-                  </button>
-                </div>
-                <pre className="font-mono text-xs text-slate-700 overflow-x-auto whitespace-pre-wrap">
-                  {NETLIFY_STEPS}
-                </pre>
-              </div>
-
+          {/* Section 3 */}
+          <div className="space-y-2">
+            <div className="flex items-center gap-2 font-bold text-slate-900 text-sm">
+              <span className="w-6 h-6 rounded-full bg-emerald-100 text-emerald-800 flex items-center justify-center text-xs font-black">3</span>
+              <span>Pro Tips for Maximum Engagement</span>
             </div>
-          )}
-
-          {/* Tab 3: Firebase Config & Rules */}
-          {activeGuideTab === 'firebase' && (
-            <div className="space-y-4">
-              <div>
-                <div className="flex items-center justify-between mb-2">
-                  <span className="text-xs font-bold text-slate-900">firebase-config.js (Modular SDK)</span>
-                  <button
-                    onClick={() => copyToClipboard(EXPORTED_FIREBASE_CONFIG_JS, 'firebase-config.js')}
-                    className="flex items-center gap-1 text-xs font-bold text-indigo-600 hover:underline"
-                  >
-                    <Copy className="h-3.5 w-3.5" />
-                    <span>Copy Code</span>
-                  </button>
-                </div>
-                <div className="rounded-2xl border border-slate-800 bg-slate-950 p-4 font-mono text-xs text-slate-300 max-h-48 overflow-y-auto">
-                  <pre>{EXPORTED_FIREBASE_CONFIG_JS}</pre>
-                </div>
+            <div className="space-y-1.5 pl-8 text-xs text-slate-600">
+              <div className="flex items-center gap-2">
+                <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0" />
+                <span>Set rewards at 10 to 15 coins per action to place your campaigns at top priority in the task feed.</span>
               </div>
-
-              <div>
-                <div className="flex items-center justify-between mb-2">
-                  <span className="text-xs font-bold text-slate-900">firestore.rules (Security Architecture)</span>
-                  <button
-                    onClick={() => copyToClipboard(EXPORTED_FIRESTORE_RULES, 'firestore.rules')}
-                    className="flex items-center gap-1 text-xs font-bold text-indigo-600 hover:underline"
-                  >
-                    <Copy className="h-3.5 w-3.5" />
-                    <span>Copy Rules</span>
-                  </button>
-                </div>
-                <div className="rounded-2xl border border-slate-800 bg-slate-950 p-4 font-mono text-xs text-slate-300 max-h-48 overflow-y-auto">
-                  <pre>{EXPORTED_FIRESTORE_RULES}</pre>
-                </div>
+              <div className="flex items-center gap-2">
+                <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0" />
+                <span>Claim your Daily Login Bonus every 24 hours to grow your streak and bonus balance.</span>
+              </div>
+              <div className="flex items-center gap-2">
+                <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0" />
+                <span>Share your referral link with creator friends to earn 100 bonus coins for every registered user.</span>
               </div>
             </div>
-          )}
+          </div>
 
         </div>
 
         {/* Footer */}
-        <div className="mt-6 flex justify-end border-t border-slate-100 pt-4">
+        <div className="p-4 border-t border-slate-100 bg-slate-50 flex items-center justify-between">
           <button
             onClick={() => setIsDeployGuideOpen(false)}
-            className="rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white px-5 py-2.5 text-xs font-bold transition-all shadow-xs"
+            className="px-4 py-2 text-xs font-semibold text-slate-600 hover:text-slate-900 cursor-pointer"
           >
-            Done
+            Close
+          </button>
+
+          <button
+            onClick={() => {
+              setIsDeployGuideOpen(false);
+              setActiveTab('explore');
+            }}
+            className="px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-bold rounded-xl shadow-xs transition cursor-pointer"
+          >
+            Explore Campaigns Now
           </button>
         </div>
 
