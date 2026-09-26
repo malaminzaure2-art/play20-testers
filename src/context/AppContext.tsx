@@ -33,6 +33,7 @@ import {
   doc,
   setDoc,
   getDoc,
+  getDocs,
   updateDoc,
   deleteDoc,
   onSnapshot,
@@ -109,6 +110,8 @@ interface AppContextType {
   isAdmin: boolean;
   isAdminPanelOpen: boolean;
   setIsAdminPanelOpen: (open: boolean) => void;
+  registeredUsers: UserProfile[];
+  refreshUsersList: () => Promise<void>;
   dispatchAdminCustomerOrder: (order: {
     customerName: string;
     platform: SocialPlatform;
@@ -152,7 +155,41 @@ const STORAGE_KEYS = {
   USER: 'trendboost_user_v3',
   CAMPAIGNS: 'trendboost_campaigns_v3',
   TASKS: 'trendboost_tasks_v3',
+  USERS: 'trendboost_registered_users_v3',
 };
+
+export const INITIAL_REGISTERED_USERS: UserProfile[] = [
+  {
+    uid: 'admin-msngapps',
+    email: 'msngapps@gmail.com',
+    displayName: 'Sulaiman (Admin)',
+    credits: 5000,
+    joinedAt: '2026-03-01T08:00:00Z',
+    role: 'admin',
+    campaignsCreatedCount: 12,
+    tasksCompletedCount: 45,
+    dailyStreak: 18,
+    referralCode: 'TB-ADMIN1',
+    referralsCount: 24,
+    referralEarnings: 2400,
+    boosterTier: 'Diamond VIP',
+  },
+  {
+    uid: 'user-malaminzaure2',
+    email: 'malaminzaure2@gmail.com',
+    displayName: 'Malam Inzaure',
+    credits: 1200,
+    joinedAt: '2026-03-10T11:20:00Z',
+    role: 'admin',
+    campaignsCreatedCount: 5,
+    tasksCompletedCount: 28,
+    dailyStreak: 7,
+    referralCode: 'TB-MALAM2',
+    referralsCount: 8,
+    referralEarnings: 800,
+    boosterTier: 'Gold',
+  },
+];
 
 // Check if daily bonus was claimed today
 export const isBonusClaimedToday = (lastClaimDate?: string): boolean => {
@@ -228,6 +265,89 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   // Admin Panel State
   const [isAdminPanelOpen, setIsAdminPanelOpen] = useState(false);
   const isAdmin = isUserAdmin(user?.email, user?.role);
+
+  // Registered Users Registry for Admin Panel (Only real users & admins, no test data)
+  const [registeredUsers, setRegisteredUsers] = useState<UserProfile[]>(() => {
+    const saved = localStorage.getItem(STORAGE_KEYS.USERS);
+    if (saved) {
+      try {
+        const parsed = JSON.parse(saved);
+        if (Array.isArray(parsed) && parsed.length > 0) {
+          // Remove any dummy/sample emails
+          const cleaned = parsed.filter((u: UserProfile) => 
+            u && u.email &&
+            !u.email.includes('ali_kannywood') && 
+            !u.email.includes('hausacomedy') && 
+            !u.email.includes('ibrahim.kaduna') && 
+            !u.email.includes('maryam.fashion') &&
+            !u.uid?.includes('kannywood') &&
+            !u.uid?.includes('hausa-comedy')
+          );
+          if (cleaned.length > 0) {
+            localStorage.setItem(STORAGE_KEYS.USERS, JSON.stringify(cleaned));
+            return cleaned;
+          }
+        }
+      } catch (e) {}
+    }
+    return INITIAL_REGISTERED_USERS;
+  });
+
+  // Keep registeredUsers list in sync when current user changes/logs in
+  useEffect(() => {
+    if (user && user.email) {
+      setRegisteredUsers(prev => {
+        const cleanUserEmail = user.email.toLowerCase().trim();
+        const existingIdx = prev.findIndex(u => u.uid === user.uid || u.email.toLowerCase().trim() === cleanUserEmail);
+        let updated: UserProfile[];
+        if (existingIdx >= 0) {
+          updated = [...prev];
+          updated[existingIdx] = { 
+            ...updated[existingIdx], 
+            ...user,
+            role: isUserAdmin(user.email, user.role) ? 'admin' : updated[existingIdx].role 
+          };
+        } else {
+          updated = [{ ...user, role: isUserAdmin(user.email, user.role) ? 'admin' : user.role }, ...prev];
+        }
+        try { localStorage.setItem(STORAGE_KEYS.USERS, JSON.stringify(updated)); } catch (e) {}
+        return updated;
+      });
+    }
+  }, [user]);
+
+  const refreshUsersList = async () => {
+    try {
+      const { db } = getFirebaseInstance();
+      if (db) {
+        const usersCol = collection(db, 'trendboost_users');
+        const snap = await getDocs(usersCol);
+        if (!snap.empty) {
+          const fromDb: UserProfile[] = [];
+          snap.forEach(docSnap => {
+            const data = docSnap.data() as UserProfile;
+            if (data && data.email) fromDb.push(data);
+          });
+          if (fromDb.length > 0) {
+            setRegisteredUsers(prev => {
+              const map = new Map<string, UserProfile>();
+              prev.forEach(u => map.set(u.email.toLowerCase().trim(), u));
+              fromDb.forEach(u => map.set(u.email.toLowerCase().trim(), { ...u, role: isUserAdmin(u.email, u.role) ? 'admin' : u.role }));
+              const merged = Array.from(map.values());
+              try { localStorage.setItem(STORAGE_KEYS.USERS, JSON.stringify(merged)); } catch (e) {}
+              return merged;
+            });
+            addToast('success', 'An Sabunta Masu Amfani', `An jero bayanan mutane ${fromDb.length} daga sabar tsaro.`);
+            return;
+          }
+        }
+      }
+      addToast('info', 'Users Synced', 'Jerin masu amfani yana sabuntacce (Live).');
+    } catch (err) {
+      console.warn('[Sync Users]', err);
+      addToast('info', 'Users List', 'Ana nuna jerin masu amfani a halin yanzu.');
+    }
+  };
 
   // Search & Filtering
   const [searchQuery, setSearchQuery] = useState('');
@@ -1085,6 +1205,8 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         isAdmin,
         isAdminPanelOpen,
         setIsAdminPanelOpen,
+        registeredUsers,
+        refreshUsersList,
         dispatchAdminCustomerOrder,
         searchQuery,
         setSearchQuery,

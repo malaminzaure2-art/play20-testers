@@ -1,18 +1,32 @@
 {
+  "id": "/",
   "name": "TrendBoost - Social Media Growth",
   "short_name": "TrendBoost",
-  "description": "Smart coin-based social media boosting platform for TikTok, YouTube, and more.",
+  "description": "Smart coin-based social media growth platform for TikTok, YouTube, and more.",
   "start_url": "/",
+  "scope": "/",
   "display": "standalone",
-  "background_color": "#0f172a",
+  "background_color": "#ffffff",
   "theme_color": "#4f46e5",
   "orientation": "portrait-primary",
   "icons": [
     {
       "src": "/pwa-icon.svg",
-      "sizes": "192x192 512x512",
+      "sizes": "512x512",
       "type": "image/svg+xml",
-      "purpose": "any maskable"
+      "purpose": "any"
+    },
+    {
+      "src": "/pwa-192x192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "/pwa-512x512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any"
     }
   ]
 }
