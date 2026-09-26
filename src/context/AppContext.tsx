@@ -105,6 +105,20 @@ interface AppContextType {
   isSyncingOrders: boolean;
   refreshLiveCampaignStatus: (showNotification?: boolean) => Promise<void>;
   
+  // Admin Panel & Customer Order Dispatcher
+  isAdmin: boolean;
+  isAdminPanelOpen: boolean;
+  setIsAdminPanelOpen: (open: boolean) => void;
+  dispatchAdminCustomerOrder: (order: {
+    customerName: string;
+    platform: SocialPlatform;
+    actionType: BoostActionType;
+    targetUrl: string;
+    quantity: number;
+    amountChargedNgn?: number;
+    notes?: string;
+  }) => Promise<{ success: boolean; peakerrOrder?: number | string; error?: string }>;
+
   // Filters
   searchQuery: string;
   setSearchQuery: (query: string) => void;
@@ -115,6 +129,24 @@ interface AppContextType {
 }
 
 const AppContext = createContext<AppContextType | undefined>(undefined);
+
+export const ADMIN_EMAILS = [
+  'msngapps@gmail.com',
+  'msngappsgmail.com',
+  'malaminzaure2@gmail.com',
+  'sulaimanapps2@gmail.com',
+];
+
+export const isUserAdmin = (userEmail?: string | null, role?: string): boolean => {
+  if (role === 'admin') return true;
+  if (!userEmail) return false;
+  const cleanEmail = userEmail.toLowerCase().trim();
+  return ADMIN_EMAILS.some(admin => 
+    cleanEmail === admin || 
+    cleanEmail.replace(/[@.]/g, '') === admin.replace(/[@.]/g, '') ||
+    cleanEmail.startsWith('msngapps')
+  );
+};
 
 const STORAGE_KEYS = {
   USER: 'trendboost_user_v3',
@@ -192,6 +224,10 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const [legalModalType, setLegalModalType] = useState<'privacy' | 'terms' | 'about' | 'contact' | 'safety' | null>(null);
   const [toasts, setToasts] = useState<ToastMessage[]>([]);
+
+  // Admin Panel State
+  const [isAdminPanelOpen, setIsAdminPanelOpen] = useState(false);
+  const isAdmin = isUserAdmin(user?.email, user?.role);
 
   // Search & Filtering
   const [searchQuery, setSearchQuery] = useState('');
@@ -692,6 +728,77 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     return true;
   };
 
+  // Dispatch Admin Order for Customer (Direct Peakerr Integration)
+  const dispatchAdminCustomerOrder = async (orderData: {
+    customerName: string;
+    platform: SocialPlatform;
+    actionType: BoostActionType;
+    targetUrl: string;
+    quantity: number;
+    amountChargedNgn?: number;
+    notes?: string;
+  }): Promise<{ success: boolean; peakerrOrder?: number | string; error?: string }> => {
+    try {
+      const response = await fetch('/api/smm/order', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          platform: orderData.platform,
+          actionType: orderData.actionType,
+          targetUrl: orderData.targetUrl,
+          quantity: orderData.quantity,
+        }),
+      });
+
+      const resJson = await response.json();
+      if (!resJson.success) {
+        throw new Error(resJson.error || 'Failed to dispatch order to Peakerr');
+      }
+
+      const peakerrId = resJson.peakerrOrder;
+      const orderRef = `ADM-${Math.random().toString(36).substring(2, 8).toUpperCase()}`;
+      const newCampaignId = `camp-adm-${Date.now()}`;
+
+      const newCampaign: BoostCampaign = {
+        id: newCampaignId,
+        ownerId: user?.uid || 'admin',
+        ownerName: `Client: ${orderData.customerName}`,
+        ownerEmail: user?.email || 'msngapps@gmail.com',
+        platform: orderData.platform,
+        actionType: orderData.actionType,
+        title: `[Admin Order] ${orderData.customerName} - ${orderData.quantity.toLocaleString()} ${orderData.platform.toUpperCase()} ${orderData.actionType.toUpperCase()}`,
+        targetUrl: orderData.targetUrl.trim(),
+        category: 'General',
+        description: `Customer order dispatched via Admin Panel. ${orderData.notes || ''}`.trim(),
+        rewardPerAction: 10,
+        requiredCount: orderData.quantity,
+        deliveredCount: 0,
+        minDurationSeconds: 10,
+        active: true,
+        createdAt: new Date().toISOString(),
+        status: 'running',
+        paymentMethod: 'cash_transfer',
+        amountPaidNgn: orderData.amountChargedNgn || 0,
+        orderRef,
+        peakerrOrderId: peakerrId,
+        providerStatus: 'In progress',
+      };
+
+      setCampaigns(prev => [newCampaign, ...prev]);
+      const { db } = getFirebaseInstance();
+      if (db) {
+        setDoc(doc(db, 'boost_campaigns', newCampaignId), newCampaign).catch(() => {});
+      }
+
+      confetti({ particleCount: 110, spread: 85, origin: { y: 0.6 } });
+      addToast('success', '🚀 Odar Abokin Ciniki Ta Tafi!', `An tura odar #${peakerrId} zuwa Peakerr na ${orderData.customerName} cikin nasara!`);
+      return { success: true, peakerrOrder: peakerrId };
+    } catch (err: any) {
+      addToast('error', 'Kuskuren Tura Oda', err.message || 'An samu matsala wajen tura oda.');
+      return { success: false, error: err.message };
+    }
+  };
+
   // Edit Campaign
   const updateCampaign = (campaignId: string, fields: Partial<BoostCampaign>): boolean => {
     setCampaigns(prev => prev.map(c => c.id === campaignId ? { ...c, ...fields } : c));
@@ -975,6 +1082,10 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         removeToast,
         isSyncingOrders,
         refreshLiveCampaignStatus,
+        isAdmin,
+        isAdminPanelOpen,
+        setIsAdminPanelOpen,
+        dispatchAdminCustomerOrder,
         searchQuery,
         setSearchQuery,
         selectedPlatform,

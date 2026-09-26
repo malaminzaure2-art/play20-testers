@@ -15,6 +15,7 @@ import { ReferralModal } from './components/ReferralModal';
 import { LeaderboardModal } from './components/LeaderboardModal';
 import { LegalModals } from './components/LegalModals';
 import { AuthModal } from './components/AuthModal';
+import { AdminPanelModal } from './components/AdminPanelModal';
 import { PwaInstallBanner } from './components/PwaInstallBanner';
 import { Footer } from './components/Footer';
 import { ToastContainer } from './components/Toast';
@@ -89,6 +90,7 @@ const MainContent: React.FC = () => {
 
       {/* Modals & Portals */}
       <AuthModal />
+      <AdminPanelModal />
       <TaskModal />
       <AddAppModal />
       <EditAppModal />

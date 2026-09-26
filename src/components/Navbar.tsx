@@ -4,14 +4,17 @@ import {
   PlusCircle, 
   Menu, 
   Sparkles, 
-  TrendingUp,
-  LogIn,
-  Zap
+  TrendingUp, 
+  LogIn, 
+  Zap,
+  ShieldCheck
 } from 'lucide-react';
 
 export const Navbar: React.FC = () => {
   const {
     user,
+    isAdmin,
+    setIsAdminPanelOpen,
     activeTab,
     setActiveTab,
     setIsAuthModalOpen,
@@ -87,9 +90,23 @@ export const Navbar: React.FC = () => {
           </button>
         </nav>
 
-        {/* Right Side: Place Order CTA, Auth */}
+        {/* Right Side: Admin Button, Place Order CTA, Auth */}
         <div className="flex items-center gap-2 shrink-0">
           
+          {/* Admin Dispatcher Button (Visible ONLY when logged in as admin) */}
+          {isAdmin && (
+            <button
+              id="btn-admin-panel-nav"
+              onClick={() => setIsAdminPanelOpen(true)}
+              className="bg-gradient-to-r from-amber-500 via-amber-600 to-amber-700 hover:from-amber-400 hover:to-amber-500 text-slate-950 font-black text-xs sm:text-sm px-3 sm:px-3.5 py-2 sm:py-2.5 rounded-xl shadow-md shadow-amber-500/25 transition flex items-center gap-1.5 cursor-pointer active:scale-95 border border-amber-300 animate-pulse"
+              title="Budaddiyar Tashar Admin (Customer Dispatcher)"
+            >
+              <ShieldCheck className="w-4 h-4 text-slate-950" />
+              <span className="hidden sm:inline">Admin Panel</span>
+              <span className="sm:hidden text-xs">Admin</span>
+            </button>
+          )}
+
           {/* Create Promotion CTA Button */}
           <button
             id="btn-create-campaign-nav"

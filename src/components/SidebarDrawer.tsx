@@ -7,7 +7,9 @@ import {
   FileText,
   PhoneCall,
   LogOut,
-  LogIn
+  LogIn,
+  ShieldCheck,
+  Zap
 } from 'lucide-react';
 
 export const SidebarDrawer: React.FC = () => {
@@ -15,6 +17,8 @@ export const SidebarDrawer: React.FC = () => {
     isSidebarOpen,
     setIsSidebarOpen,
     user,
+    isAdmin,
+    setIsAdminPanelOpen,
     activeTab,
     setActiveTab,
     setIsAuthModalOpen,
@@ -74,13 +78,20 @@ export const SidebarDrawer: React.FC = () => {
                   className="w-12 h-12 rounded-xl object-cover border-2 border-indigo-300 shadow-xs"
                 />
                 <div className="min-w-0 flex-1">
-                  <h3 className="font-bold text-sm text-slate-900 truncate">
-                    {user.displayName}
-                  </h3>
+                  <div className="flex items-center gap-1.5">
+                    <h3 className="font-bold text-sm text-slate-900 truncate">
+                      {user.displayName}
+                    </h3>
+                    {isAdmin && (
+                      <span className="text-[9px] font-black uppercase px-1.5 py-0.2 rounded bg-amber-400 text-slate-950">
+                        Admin
+                      </span>
+                    )}
+                  </div>
                   <p className="text-xs text-slate-500 truncate">{user.email}</p>
                   <div className="mt-1 flex items-center gap-1.5">
                     <span className="text-[10px] font-bold px-2 py-0.5 rounded-md bg-indigo-100 text-indigo-700">
-                      {user.boosterTier || 'Bronze Booster'}
+                      {isAdmin ? '👑 Super Admin' : (user.boosterTier || 'Bronze Booster')}
                     </span>
                   </div>
                 </div>
@@ -92,7 +103,7 @@ export const SidebarDrawer: React.FC = () => {
                   <div className="text-[10px] text-slate-500 font-bold uppercase">Account Status</div>
                   <div className="font-extrabold text-xs text-emerald-600 flex items-center gap-1">
                     <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
-                    <span>Active Member</span>
+                    <span>{isAdmin ? 'Administrator' : 'Active Member'}</span>
                   </div>
                 </div>
               </div>
@@ -121,8 +132,41 @@ export const SidebarDrawer: React.FC = () => {
         </div>
 
         {/* Navigation Links */}
-        <div className="flex-1 overflow-y-auto p-4 space-y-6">
+        <div className="flex-1 overflow-y-auto p-4 space-y-5">
           
+          {/* Admin Dedicated Section (Visible ONLY for admin emails) */}
+          {isAdmin && (
+            <div className="bg-gradient-to-r from-amber-500/15 via-amber-600/10 to-indigo-500/10 p-3.5 rounded-2xl border border-amber-300 shadow-xs space-y-2">
+              <div className="text-[10px] font-black text-amber-900 uppercase tracking-wider flex items-center justify-between">
+                <div className="flex items-center gap-1.5">
+                  <ShieldCheck className="w-3.5 h-3.5 text-amber-600" />
+                  <span>Dandalin Kula Da Odoji</span>
+                </div>
+                <span className="bg-amber-400 text-slate-950 px-1.5 py-0.5 rounded text-[9px] font-bold">
+                  ADMIN
+                </span>
+              </div>
+              <p className="text-[11px] text-slate-600">
+                Tura odar abokan ciniki da suka turo kudi a asusunka.
+              </p>
+              <button
+                onClick={() => {
+                  setIsSidebarOpen(false);
+                  setIsAdminPanelOpen(true);
+                }}
+                className="w-full flex items-center justify-between px-3 py-2.5 rounded-xl text-xs font-black bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-400 hover:to-amber-500 text-slate-950 shadow-xs transition cursor-pointer"
+              >
+                <div className="flex items-center gap-2">
+                  <Zap className="w-4 h-4 text-slate-950 fill-slate-950" />
+                  <span>Customer Dispatcher</span>
+                </div>
+                <span className="text-[10px] bg-slate-950 text-amber-300 px-1.5 py-0.5 rounded-md font-mono">
+                  OPEN 👉
+                </span>
+              </button>
+            </div>
+          )}
+
           {/* Main Navigation */}
           <div>
             <div className="text-[11px] font-bold text-slate-400 uppercase tracking-wider px-2 mb-2">

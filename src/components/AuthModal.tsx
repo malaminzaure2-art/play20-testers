@@ -281,6 +281,20 @@ export const AuthModal: React.FC = () => {
               </>
             )}
           </button>
+
+          {/* Quick Admin Login Helper */}
+          <div className="pt-1 text-center">
+            <button
+              type="button"
+              onClick={() => {
+                setEmail('msngapps@gmail.com');
+                setPassword('admin123456');
+              }}
+              className="text-[11px] text-amber-800 hover:text-amber-900 font-bold bg-amber-50 hover:bg-amber-100/80 border border-amber-200/80 px-3 py-1.5 rounded-xl transition cursor-pointer inline-flex items-center gap-1.5"
+            >
+              <span>👑 Sanya Email ɗin Admin (msngapps@gmail.com)</span>
+            </button>
+          </div>
         </form>
 
         {/* Benefits reminder */}
