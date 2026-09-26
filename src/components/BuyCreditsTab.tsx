@@ -178,7 +178,7 @@ export const BuyCreditsTab: React.FC = () => {
         </div>
 
         <a
-          href="https://wa.me/2348000000000?text=Hello%20TrendBoost,%20I%20would%20like%20to%20purchase%20boosting%20Coins"
+          href="https://wa.me/2349068990863?text=Hello%20TrendBoost,%20I%20would%20like%20to%20purchase%20boosting%20Coins"
           target="_blank"
           rel="noopener noreferrer"
           className="bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-black text-xs sm:text-sm px-6 py-3.5 rounded-2xl shadow-lg shadow-emerald-500/30 transition flex items-center gap-2 shrink-0 cursor-pointer"

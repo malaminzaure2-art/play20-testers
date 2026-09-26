@@ -793,34 +793,6 @@ export const AdminPanelModal: React.FC = () => {
 
               </div>
 
-              {/* Google & AdSense Compliance Banner (Very Important for Peace of Mind!) */}
-              <div className="bg-gradient-to-r from-emerald-50 via-teal-50 to-emerald-50 border border-emerald-200 rounded-3xl p-4 sm:p-5 shadow-xs">
-                <div className="flex items-start gap-3.5">
-                  <div className="w-10 h-10 rounded-2xl bg-emerald-100 text-emerald-800 flex items-center justify-center shrink-0 shadow-xs">
-                    <Lock className="w-5 h-5 text-emerald-700" />
-                  </div>
-                  <div className="space-y-1">
-                    <div className="flex items-center gap-2">
-                      <h4 className="font-extrabold text-sm text-emerald-950">
-                        Kariyar Sirri da Amincewar Google & AdSense (100% Compliant)
-                      </h4>
-                      <span className="bg-emerald-200 text-emerald-900 text-[10px] font-black px-2 py-0.5 rounded-full uppercase">
-                        Tsaro
-                      </span>
-                    </div>
-                    <p className="text-xs text-emerald-900/90 leading-relaxed">
-                      <strong>Shin Google zai hana ka tallar AdSense ko traffic saboda ganin Users?</strong> <br />
-                      <strong>A'a, sam ba zai hana ka ba!</strong> Dukkan manyan shafukan duniya (kamar WordPress, Shopify, YouTube) suna da sashen Admin Users. Tsarinmu yana amfani da <strong>Firebase Security</strong> inda ko kai admin ba ka san kalmar sirri (password) ta kowa ba (tana a ɓoye).
-                    </p>
-                    <div className="pt-1.5 flex flex-wrap items-center gap-3 text-[11px] text-emerald-800 font-medium">
-                      <span className="flex items-center gap-1">✅ Kalmomin sirri (Passwords) a ɓoye suke 100%</span>
-                      <span className="flex items-center gap-1">✅ Bayanai na sirri ba a bainar jama'a suke ba</span>
-                      <span className="flex items-center gap-1">✅ Yana ƙara darajar shafinka wajen Google AdSense</span>
-                    </div>
-                  </div>
-                </div>
-              </div>
-
               {/* Search, Filter, & Refresh Tools */}
               <div className="bg-white border border-slate-200 rounded-3xl p-4 sm:p-5 space-y-3 shadow-xs">
                 <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
@@ -830,7 +802,7 @@ export const AdminPanelModal: React.FC = () => {
                     <Search className="w-4 h-4 text-slate-400 absolute left-3.5 top-3" />
                     <input
                       type="text"
-                      placeholder="Bincika mai amfani da suna ko email (misali: ali, msngapps, malaminzaure)..."
+                      placeholder="Bincika mai amfani da suna ko email..."
                       value={userSearchTerm}
                       onChange={(e) => setUserSearchTerm(e.target.value)}
                       className="w-full bg-slate-50 border border-slate-200 rounded-2xl pl-10 pr-4 py-2.5 text-xs text-slate-900 focus:bg-white focus:border-indigo-600 outline-none transition font-medium"

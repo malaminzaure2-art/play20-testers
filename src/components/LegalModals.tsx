@@ -184,25 +184,25 @@ export const LegalModals: React.FC = () => {
                   <div className="p-4 rounded-2xl bg-slate-50 border border-slate-200 space-y-1">
                     <span className="text-[10px] font-bold text-slate-400 uppercase">WhatsApp Support</span>
                     <a
-                      href="https://wa.me/2348000000000?text=Hello%20TrendBoost%20Support"
+                      href="https://wa.me/2349068990863?text=Sannu%20TrendBoost%20Support,%20ina%20son%20yin%20magana%20kan%20TrendBoost"
                       target="_blank"
                       rel="noopener noreferrer"
                       className="text-xs font-bold text-emerald-600 hover:underline block"
                     >
-                      +234 WhatsApp Admin
+                      +234 906 899 0863
                     </a>
-                    <p className="text-[10px] text-slate-500">Typical response time: under 5 minutes</p>
+                    <p className="text-[10px] text-slate-500">Taimako kai tsaye a WhatsApp</p>
                   </div>
 
                   <div className="p-4 rounded-2xl bg-slate-50 border border-slate-200 space-y-1">
                     <span className="text-[10px] font-bold text-slate-400 uppercase">Email Support</span>
                     <a
-                      href="mailto:malaminzaure2@gmail.com"
+                      href="mailto:msngapps@gmail.com"
                       className="text-xs font-bold text-indigo-600 hover:underline block"
                     >
-                      malaminzaure2@gmail.com
+                      msngapps@gmail.com
                     </a>
-                    <p className="text-[10px] text-slate-500">Official developer email</p>
+                    <p className="text-[10px] text-slate-500">Official support email</p>
                   </div>
                 </div>
               </div>
