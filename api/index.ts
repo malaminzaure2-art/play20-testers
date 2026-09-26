@@ -1,59 +1,50 @@
 import express from 'express';
-import path from 'path';
-import { fileURLToPath } from 'url';
-import { createServer as createViteServer } from 'vite';
-
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = path.dirname(__filename);
 
 const app = express();
-const PORT = 3000;
-
 app.use(express.json());
 
-// Peakerr API Configuration
 const PEAKERR_API_URL = process.env.PEAKERR_API_URL || 'https://peakerr.com/api/v2';
 const PEAKERR_API_KEY = process.env.PEAKERR_API_KEY || '4286fa8d84a11710a0c541ceb918ebf0';
 
-// Service mapping fallback (Default Peakerr Service IDs for popular social networks)
+// Service mapping fallback
 const DEFAULT_SERVICE_MAPPING: Record<string, Record<string, number>> = {
   tiktok: {
-    view: 32921, // TikTok Video Views (High speed & low cost)
-    like: 24733, // TikTok Likes (HQ & Real profiles)
-    follow: 25000, // TikTok Followers (HQ & Profiles With Photo)
-    comment: 27980, // TikTok Custom Comments
-    share: 29452, // TikTok Shares
+    view: 32921,
+    like: 24733,
+    follow: 25000,
+    comment: 27980,
+    share: 29452,
   },
   youtube: {
-    view: 30204, // YouTube Views (Lifetime refill, high retention)
-    like: 30837, // YouTube Likes (High speed)
-    subscribe: 23304, // YouTube Subscribers (SuperInstant)
-    comment: 28745, // YouTube Custom Comments
+    view: 30204,
+    like: 30837,
+    subscribe: 23304,
+    comment: 28745,
   },
   instagram: {
-    view: 19327, // Instagram Views (MQ 100M Super fast)
-    like: 36643, // Instagram Likes (Cheapest server)
-    follow: 31838, // Instagram Followers (100% Real Accounts With Posts)
-    comment: 29484, // Instagram Random Comments
+    view: 19327,
+    like: 36643,
+    follow: 31838,
+    comment: 29484,
   },
   facebook: {
-    follow: 33038, // Facebook Page & Profile Followers
-    like: 33050, // Facebook Post Reactions / Likes
-    view: 32194, // Facebook Video / Reel Views
-    share: 33534, // Facebook Post Shares
+    follow: 33038,
+    like: 33050,
+    view: 32194,
+    share: 33534,
   },
   twitter: {
-    follow: 31488, // Twitter / X Followers
-    like: 31490, // Twitter / X Likes
-    view: 17427, // Twitter Tweet Views
+    follow: 31488,
+    like: 31490,
+    view: 17427,
   },
   website: {
-    view: 9125, // Worldwide Web Traffic
+    view: 9125,
   },
 };
 
 // 1. API: Check Peakerr Balance
-app.get('/api/smm/balance', async (req, res) => {
+app.get('/api/smm/balance', async (_req, res) => {
   try {
     const params = new URLSearchParams({
       key: PEAKERR_API_KEY,
@@ -69,7 +60,6 @@ app.get('/api/smm/balance', async (req, res) => {
     const data = await response.json();
     res.json({ success: true, data });
   } catch (error: any) {
-    console.error('Peakerr balance check error:', error);
     res.status(500).json({ success: false, error: error.message || 'Failed to check balance' });
   }
 });
@@ -83,7 +73,6 @@ app.post('/api/smm/order', async (req, res) => {
       return res.status(400).json({ success: false, error: 'Target URL and quantity are required' });
     }
 
-    // Determine Peakerr Service ID
     let resolvedServiceId = serviceId;
     if (!resolvedServiceId && platform && actionType) {
       resolvedServiceId = DEFAULT_SERVICE_MAPPING[platform]?.[actionType] || 340;
@@ -97,8 +86,6 @@ app.post('/api/smm/order', async (req, res) => {
       quantity: String(quantity),
     });
 
-    console.log(`[SMM Order] Submitting to Peakerr: Service ${resolvedServiceId}, Qty: ${quantity}, Link: ${targetUrl}`);
-
     const response = await fetch(PEAKERR_API_URL, {
       method: 'POST',
       headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
@@ -106,8 +93,6 @@ app.post('/api/smm/order', async (req, res) => {
     });
 
     const data = await response.json();
-    console.log('[SMM Order] Peakerr Response:', data);
-
     res.json({
       success: !data.error,
       peakerrOrder: data.order || null,
@@ -115,7 +100,6 @@ app.post('/api/smm/order', async (req, res) => {
       raw: data,
     });
   } catch (error: any) {
-    console.error('Peakerr order error:', error);
     res.status(500).json({
       success: false,
       error: error.message || 'Failed to dispatch order to Peakerr',
@@ -143,7 +127,6 @@ app.get('/api/smm/status/:orderId', async (req, res) => {
 
     const data = await response.json();
 
-    // Check live TikTok follower count directly from TikTok if applicable
     let liveFollowerCount: number | null = null;
     const effectiveUrl = targetUrl || (orderId === '80959061' ? 'https://www.tiktok.com/@sulaimanapps2' : '');
     if (effectiveUrl && effectiveUrl.includes('tiktok.com/@')) {
@@ -163,14 +146,13 @@ app.get('/api/smm/status/:orderId', async (req, res) => {
             liveFollowerCount = parseInt(match[1], 10);
           }
         }
-      } catch (ttErr) {
-        console.warn('Could not inspect live TikTok page:', ttErr);
+      } catch (_ttErr) {
+        // Safe fallback
       }
     }
 
     res.json({ success: true, data, liveFollowerCount });
   } catch (error: any) {
-    console.error('Peakerr status check error:', error);
     res.status(500).json({ success: false, error: error.message || 'Failed to check order status' });
   }
 });
@@ -178,12 +160,11 @@ app.get('/api/smm/status/:orderId', async (req, res) => {
 // 3b. Dedicated Live Profile Inspector
 app.get('/api/smm/live-profile', async (req, res) => {
   try {
-    const targetUrl = (req.query.url as string) || '';
-    if (!targetUrl) return res.status(400).json({ error: 'Missing url parameter' });
-
+    const url = (req.query.url as string) || '';
     let count: number | null = null;
-    if (targetUrl.includes('tiktok.com/@')) {
-      const usernameMatch = targetUrl.match(/@([a-zA-Z0-9_.-]+)/);
+
+    if (url && url.includes('tiktok.com/@')) {
+      const usernameMatch = url.match(/@([a-zA-Z0-9_.-]+)/);
       const username = usernameMatch ? usernameMatch[1] : '';
       if (username) {
         const ttRes = await fetch(`https://www.tiktok.com/@${username}`, {
@@ -207,34 +188,8 @@ app.get('/api/smm/live-profile', async (req, res) => {
 });
 
 // 4. API: Healthcheck
-app.get('/api/health', (req, res) => {
+app.get('/api/health', (_req, res) => {
   res.json({ status: 'ok', provider: 'Peakerr API v2', timestamp: new Date().toISOString() });
 });
 
-// Favicon handler to prevent browser console 404s
-app.get('/favicon.ico', (_req, res) => {
-  res.sendFile(path.join(process.cwd(), 'public', 'favicon.ico'));
-});
-
-// Vite middleware & Static Serving
-async function startServer() {
-  if (process.env.NODE_ENV !== 'production') {
-    const vite = await createViteServer({
-      server: { middlewareMode: true },
-      appType: 'spa',
-    });
-    app.use(vite.middlewares);
-  } else {
-    const distPath = path.join(process.cwd(), 'dist');
-    app.use(express.static(distPath));
-    app.get('*', (req, res) => {
-      res.sendFile(path.join(distPath, 'index.html'));
-    });
-  }
-
-  app.listen(PORT, '0.0.0.0', () => {
-    console.log(`Server running on port ${PORT} with Peakerr API integration`);
-  });
-}
-
-startServer();
+export default app;

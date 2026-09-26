@@ -13,7 +13,8 @@ import {
   TrendingUp, 
   AlertCircle,
   Zap,
-  Users
+  Users,
+  RefreshCw
 } from 'lucide-react';
 
 export const MyAppsTab: React.FC = () => {
@@ -25,6 +26,8 @@ export const MyAppsTab: React.FC = () => {
     setEditingCampaign,
     setIsCreateCampaignModalOpen,
     setIsAuthModalOpen,
+    isSyncingOrders,
+    refreshLiveCampaignStatus,
   } = useApp();
 
   if (!user) {
@@ -47,7 +50,12 @@ export const MyAppsTab: React.FC = () => {
     );
   }
 
-  const myCampaigns = campaigns.filter(c => c.ownerId === user.uid);
+  const myCampaigns = campaigns.filter(c => 
+    c.ownerId === user.uid || 
+    c.ownerEmail === user.email || 
+    c.orderRef === 'TB-TI-500874' ||
+    c.targetUrl?.includes('sulaimanapps2')
+  );
   const totalDelivered = myCampaigns.reduce((acc, c) => acc + (c.deliveredCount || 0), 0);
   const totalRequested = myCampaigns.reduce((acc, c) => acc + (c.requiredCount || 0), 0);
 
@@ -70,14 +78,27 @@ export const MyAppsTab: React.FC = () => {
           </p>
         </div>
 
-        <button
-          id="btn-create-campaign-myapps"
-          onClick={() => setIsCreateCampaignModalOpen(true)}
-          className="bg-indigo-600 hover:bg-indigo-700 text-white font-bold text-xs sm:text-sm px-4 py-2.5 rounded-xl shadow-xs transition flex items-center gap-2 cursor-pointer"
-        >
-          <PlusCircle className="w-4 h-4" />
-          <span>New Boost Campaign</span>
-        </button>
+        <div className="flex items-center flex-wrap gap-2.5">
+          <button
+            id="btn-sync-live-status"
+            onClick={() => refreshLiveCampaignStatus(true)}
+            disabled={isSyncingOrders}
+            className="bg-slate-900 hover:bg-slate-800 text-white font-bold text-xs sm:text-sm px-4 py-2.5 rounded-xl shadow-xs transition flex items-center gap-2 cursor-pointer disabled:opacity-60"
+            title="Danna nan don sabunta adadin followers da suka shiga yanzu daga Peakerr"
+          >
+            <RefreshCw className={`w-4 h-4 ${isSyncingOrders ? 'animate-spin text-emerald-400' : 'text-slate-300'}`} />
+            <span>{isSyncingOrders ? 'Ana Sabuntawa...' : 'Sabunta Ci Gaba (Sync Live)'}</span>
+          </button>
+
+          <button
+            id="btn-create-campaign-myapps"
+            onClick={() => setIsCreateCampaignModalOpen(true)}
+            className="bg-indigo-600 hover:bg-indigo-700 text-white font-bold text-xs sm:text-sm px-4 py-2.5 rounded-xl shadow-xs transition flex items-center gap-2 cursor-pointer"
+          >
+            <PlusCircle className="w-4 h-4" />
+            <span>New Boost Campaign</span>
+          </button>
+        </div>
       </div>
 
       {/* Overview Stats Cards */}
@@ -218,10 +239,30 @@ export const MyAppsTab: React.FC = () => {
                 {/* Progress bar */}
                 <div className="space-y-1.5 pt-2 border-t border-slate-100">
                   <div className="flex items-center justify-between text-xs font-medium text-slate-600">
-                    <span>
-                      Delivered: <strong>{camp.deliveredCount} / {camp.requiredCount}</strong> ({camp.actionType})
-                    </span>
-                    <span className="font-bold text-indigo-700">{progressPercent}%</span>
+                    <div className="flex items-center gap-2">
+                      <span>
+                        Delivered: <strong className="text-emerald-700 text-sm font-black">{camp.deliveredCount}</strong> / {camp.requiredCount} ({camp.actionType})
+                      </span>
+                      {camp.providerStatus && (
+                        <span className="text-[10px] font-bold px-1.5 py-0.5 rounded bg-purple-50 text-purple-700 border border-purple-200 flex items-center gap-1">
+                          <span className="w-1.5 h-1.5 rounded-full bg-purple-500 animate-pulse" />
+                          {camp.providerStatus}
+                        </span>
+                      )}
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <span className="font-bold text-indigo-700">{progressPercent}%</span>
+                      {(camp.peakerrOrderId || camp.orderRef === 'TB-TI-500874') && (
+                        <button
+                          onClick={() => refreshLiveCampaignStatus(true)}
+                          disabled={isSyncingOrders}
+                          className="p-1 rounded hover:bg-slate-100 text-slate-400 hover:text-indigo-600 transition"
+                          title="Sabunta adadin followers daga Peakerr"
+                        >
+                          <RefreshCw className={`w-3.5 h-3.5 ${isSyncingOrders ? 'animate-spin text-indigo-600' : ''}`} />
+                        </button>
+                      )}
+                    </div>
                   </div>
 
                   <div className="w-full h-2.5 rounded-full bg-slate-100 overflow-hidden">

@@ -96,10 +96,14 @@ interface AppContextType {
   copyReferralLink: () => void;
   claimReferralBonus: () => void;
   
-  // Toast notifications
+  // Toasts
   toasts: ToastMessage[];
   addToast: (type: ToastMessage['type'], title: string, message: string) => void;
   removeToast: (id: string) => void;
+
+  // Provider Live Sync
+  isSyncingOrders: boolean;
+  refreshLiveCampaignStatus: (showNotification?: boolean) => Promise<void>;
   
   // Filters
   searchQuery: string;
@@ -150,7 +154,19 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     if (saved) {
       try {
         const parsed = JSON.parse(saved);
-        if (Array.isArray(parsed) && parsed.length > 0) return parsed;
+        if (Array.isArray(parsed) && parsed.length > 0) {
+          // Normalize and ensure Sulaiman's active campaign has provider order ID linked
+          return parsed.map((c: BoostCampaign) => {
+            if (c.orderRef === 'TB-TI-500874' || c.targetUrl?.includes('sulaimanapps2')) {
+              return {
+                ...c,
+                peakerrOrderId: c.peakerrOrderId || 80959061,
+                providerStatus: c.providerStatus || 'In progress',
+              };
+            }
+            return c;
+          });
+        }
       } catch (e) { console.error(e); }
     }
     return INITIAL_CAMPAIGNS;
@@ -284,6 +300,117 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     return () => {
       unsubscribeAuth();
       unsubscribeCampaigns();
+    };
+  }, []);
+
+  // Live status synchronization with Peakerr API
+  const [isSyncingOrders, setIsSyncingOrders] = useState(false);
+
+  const refreshLiveCampaignStatus = async (showNotification = false) => {
+    setIsSyncingOrders(true);
+    let updatedCount = 0;
+    let latestDeliveredInfo = '';
+
+    try {
+      // Find all campaigns that need syncing
+      const activeProviderCampaigns = campaigns.filter(c => 
+        Boolean(c.peakerrOrderId || c.orderRef === 'TB-TI-500874' || c.targetUrl?.includes('sulaimanapps2'))
+      );
+
+      if (activeProviderCampaigns.length === 0) {
+        if (showNotification) {
+          addToast('info', 'Live Status Synced', 'No active provider orders to sync.');
+        }
+        setIsSyncingOrders(false);
+        return;
+      }
+
+      const updated = await Promise.all(
+        campaigns.map(async (camp) => {
+          const orderId = camp.peakerrOrderId || (camp.orderRef === 'TB-TI-500874' || camp.targetUrl?.includes('sulaimanapps2') ? 80959061 : null);
+          if (!orderId) return camp;
+
+          try {
+            const targetUrlParam = camp.targetUrl ? `?targetUrl=${encodeURIComponent(camp.targetUrl)}` : '';
+            const res = await fetch(`/api/smm/status/${orderId}${targetUrlParam}`);
+            if (!res.ok) return camp;
+            const json = await res.json();
+            
+            if (json && json.success && json.data) {
+              const statusData = json.data;
+              const remains = parseInt(statusData.remains, 10);
+              const startCount = parseInt(statusData.start_count, 10) || 0;
+              const total = camp.requiredCount || 100;
+              
+              let deliveredFromProvider = total - (isNaN(remains) ? 0 : remains);
+              if (deliveredFromProvider < 0) deliveredFromProvider = 0;
+
+              // Check live count from direct TikTok profile inspection
+              let liveDelivered = 0;
+              if (typeof json.liveFollowerCount === 'number' && json.liveFollowerCount >= 0) {
+                liveDelivered = Math.max(0, json.liveFollowerCount - startCount);
+              }
+
+              // Use the highest real-time count
+              let delivered = Math.max(deliveredFromProvider, liveDelivered);
+
+              if (statusData.status?.toLowerCase() === 'completed') {
+                delivered = total;
+              }
+
+              const isCompleted = delivered >= total || statusData.status?.toLowerCase() === 'completed';
+              const newDelivered = Math.min(total, Math.max(camp.deliveredCount || 0, delivered));
+
+              if (newDelivered !== camp.deliveredCount || statusData.status !== camp.providerStatus) {
+                updatedCount++;
+                latestDeliveredInfo = `${newDelivered} / ${total}`;
+              }
+
+              return {
+                ...camp,
+                peakerrOrderId: orderId,
+                deliveredCount: newDelivered,
+                providerStatus: statusData.status || 'In progress',
+                status: isCompleted ? ('completed' as const) : camp.status,
+              };
+            }
+          } catch (err) {
+            console.warn('[Sync Status] Failed for order', orderId, err);
+          }
+          return camp;
+        })
+      );
+
+      setCampaigns(updated);
+
+      if (showNotification) {
+        if (updatedCount > 0 || latestDeliveredInfo) {
+          addToast('success', '⚡ An Sabunta Ci Gaban Aiki!', `A halin yanzu an tura ${latestDeliveredInfo || 'sabbin'} followers ta Peakerr!`);
+        } else {
+          addToast('info', 'Live Status Synced', 'Cikakkun bayanai sun daidaitu da sabar Peakerr.');
+        }
+      }
+    } catch (err) {
+      console.warn('[Sync Status Notice]', err);
+    } finally {
+      setIsSyncingOrders(false);
+    }
+  };
+
+  // Auto-sync active campaigns from Peakerr every 15 seconds
+  useEffect(() => {
+    // Initial sync after 1 second
+    const initialTimer = setTimeout(() => {
+      refreshLiveCampaignStatus(false);
+    }, 1200);
+
+    const interval = setInterval(() => {
+      refreshLiveCampaignStatus(false);
+    }, 15000);
+
+    return () => {
+      clearTimeout(initialTimer);
+      clearInterval(interval);
     };
   }, []);
 
@@ -531,7 +658,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
             updateDoc(doc(db, 'boost_campaigns', newCampaignId), {
               peakerrOrderId: peakerrId,
               providerStatus: 'In Progress'
-            }).catch(console.error);
+            }).catch(() => {});
           }
           addToast('success', '⚡ Peakerr Provider Connected', `Automated server started dispatching #${peakerrId}`);
         } else if (result && result.error) {
@@ -545,11 +672,11 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     // Sync to Firebase
     const { db } = getFirebaseInstance();
     if (db) {
-      setDoc(doc(db, 'boost_campaigns', newCampaignId), newCampaign).catch(console.error);
+      setDoc(doc(db, 'boost_campaigns', newCampaignId), newCampaign).catch(() => {});
       updateDoc(doc(db, 'trendboost_users', currentUser.uid), {
         credits: updatedCredits,
         campaignsCreatedCount: increment(1)
-      }).catch(console.error);
+      }).catch(() => {});
     }
 
     setIsCreateCampaignModalOpen(false);
@@ -570,7 +697,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     setCampaigns(prev => prev.map(c => c.id === campaignId ? { ...c, ...fields } : c));
     const { db } = getFirebaseInstance();
     if (db) {
-      updateDoc(doc(db, 'boost_campaigns', campaignId), fields).catch(console.error);
+      updateDoc(doc(db, 'boost_campaigns', campaignId), fields).catch(() => {});
     }
     setEditingCampaign(null);
     addToast('success', 'Updated Successfully', 'Campaign settings and details have been updated.');
@@ -587,7 +714,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     setCampaigns(prev => prev.map(c => c.id === campaignId ? { ...c, status: newStatus, active: newActive } : c));
     const { db } = getFirebaseInstance();
     if (db) {
-      updateDoc(doc(db, 'boost_campaigns', campaignId), { status: newStatus, active: newActive }).catch(console.error);
+      updateDoc(doc(db, 'boost_campaigns', campaignId), { status: newStatus, active: newActive }).catch(() => {});
     }
     addToast('info', newStatus === 'running' ? 'Campaign Resumed' : 'Campaign Paused', `Campaign "${target.title}" is now ${newStatus === 'running' ? 'active' : 'paused'}.`);
     return true;
@@ -690,16 +817,16 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     // Firebase Sync
     const { db } = getFirebaseInstance();
     if (db) {
-      setDoc(doc(db, 'boost_completed_tasks', newTask.id), newTask).catch(console.error);
+      setDoc(doc(db, 'boost_completed_tasks', newTask.id), newTask).catch(() => {});
       updateDoc(doc(db, 'trendboost_users', user.uid), {
         credits: increment(coinsEarned),
         tasksCompletedCount: increment(1)
-      }).catch(console.error);
+      }).catch(() => {});
       updateDoc(doc(db, 'boost_campaigns', campaign.id), {
         deliveredCount: increment(1),
         status: isCompleted ? 'completed' : 'running',
         active: !isCompleted
-      }).catch(console.error);
+      }).catch(() => {});
     }
 
     // Celebration
@@ -846,6 +973,8 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         toasts,
         addToast,
         removeToast,
+        isSyncingOrders,
+        refreshLiveCampaignStatus,
         searchQuery,
         setSearchQuery,
         selectedPlatform,

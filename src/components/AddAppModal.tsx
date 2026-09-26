@@ -42,7 +42,7 @@ const PLATFORM_CONFIG: Record<'tiktok' | 'youtube' | 'instagram' | 'facebook' | 
     services: [
       { type: 'follow', label: 'Profile Followers', unitPriceNgn: 3.5, minQty: 50 },
       { type: 'like', label: 'Video Likes', unitPriceNgn: 1.5, minQty: 50 },
-      { type: 'view', label: 'Video Views', unitPriceNgn: 0.6, minQty: 200 },
+      { type: 'view', label: 'Video Views', unitPriceNgn: 0.5, minQty: 100 },
       { type: 'comment', label: 'Custom Comments', unitPriceNgn: 10.0, minQty: 20 },
       { type: 'share', label: 'Video Shares', unitPriceNgn: 2.0, minQty: 50 },
     ],
