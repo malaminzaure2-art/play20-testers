@@ -187,7 +187,82 @@ app.get('/api/smm/live-profile', async (req, res) => {
   }
 });
 
-// 4. API: Healthcheck
+// 4. Centralized User Management & Cross-Device Sync API
+let serverRegisteredUsers: any[] = [
+  {
+    uid: 'admin-msngapps',
+    email: 'msngapps@gmail.com',
+    displayName: 'Sulaiman (Admin)',
+    credits: 5000,
+    joinedAt: '2026-03-01T08:00:00Z',
+    role: 'admin',
+    campaignsCreatedCount: 12,
+    tasksCompletedCount: 45,
+    dailyStreak: 18,
+    referralCode: 'TB-ADMIN1',
+    referralsCount: 24,
+    referralEarnings: 2400,
+    boosterTier: 'Diamond VIP',
+  },
+  {
+    uid: 'user-malaminzaure2',
+    email: 'malaminzaure2@gmail.com',
+    displayName: 'Malam Inzaure',
+    credits: 1200,
+    joinedAt: '2026-03-10T11:20:00Z',
+    role: 'admin',
+    campaignsCreatedCount: 5,
+    tasksCompletedCount: 28,
+    dailyStreak: 7,
+    referralCode: 'TB-MALAM2',
+    referralsCount: 8,
+    referralEarnings: 800,
+    boosterTier: 'Gold',
+  },
+];
+
+// GET: Fetch all real users synchronized across all devices
+app.get('/api/users', (_req, res) => {
+  res.json({ success: true, users: serverRegisteredUsers });
+});
+
+// POST: Sync user upon login / registration on phone or laptop
+app.post('/api/users/sync', (req, res) => {
+  try {
+    const { user, users } = req.body;
+    const incoming: any[] = users && Array.isArray(users) ? users : user ? [user] : [];
+
+    incoming.forEach((newUser) => {
+      if (!newUser || !newUser.email) return;
+      const cleanEmail = newUser.email.toLowerCase().trim();
+      const existingIdx = serverRegisteredUsers.findIndex(
+        (u) => (u.uid && u.uid === newUser.uid) || (u.email && u.email.toLowerCase().trim() === cleanEmail)
+      );
+
+      const isAdminEmail = cleanEmail.includes('msngapps') || cleanEmail.includes('malaminzaure');
+
+      if (existingIdx >= 0) {
+        serverRegisteredUsers[existingIdx] = {
+          ...serverRegisteredUsers[existingIdx],
+          ...newUser,
+          role: isAdminEmail ? 'admin' : (newUser.role || serverRegisteredUsers[existingIdx].role),
+        };
+      } else {
+        serverRegisteredUsers.push({
+          ...newUser,
+          role: isAdminEmail ? 'admin' : (newUser.role || 'user'),
+          joinedAt: newUser.joinedAt || new Date().toISOString(),
+        });
+      }
+    });
+
+    res.json({ success: true, count: serverRegisteredUsers.length, users: serverRegisteredUsers });
+  } catch (err: any) {
+    res.status(500).json({ success: false, error: err.message });
+  }
+});
+
+// 5. API: Healthcheck
 app.get('/api/health', (_req, res) => {
   res.json({ status: 'ok', provider: 'Peakerr API v2', timestamp: new Date().toISOString() });
 });

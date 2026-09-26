@@ -313,36 +313,126 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         try { localStorage.setItem(STORAGE_KEYS.USERS, JSON.stringify(updated)); } catch (e) {}
         return updated;
       });
+
+      // Synchronize to centralized server so mobile, laptop, and all browsers see it
+      fetch('/api/users/sync', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ user }),
+      }).catch(() => {});
     }
   }, [user]);
 
-  const refreshUsersList = async () => {
-    try {
-      const { db } = getFirebaseInstance();
-      if (db) {
-        const usersCol = collection(db, 'trendboost_users');
-        const snap = await getDocs(usersCol);
-        if (!snap.empty) {
-          const fromDb: UserProfile[] = [];
-          snap.forEach(docSnap => {
-            const data = docSnap.data() as UserProfile;
-            if (data && data.email) fromDb.push(data);
-          });
-          if (fromDb.length > 0) {
+  // Initial Cross-Device Server Sync (Runs on page load for phone & computer)
+  useEffect(() => {
+    const syncUsersAcrossDevices = async () => {
+      try {
+        // Send whatever users this device has (e.g. from laptop) to server
+        const saved = localStorage.getItem(STORAGE_KEYS.USERS);
+        if (saved) {
+          try {
+            const parsed = JSON.parse(saved);
+            if (Array.isArray(parsed) && parsed.length > 0) {
+              await fetch('/api/users/sync', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ users: parsed }),
+              });
+            }
+          } catch (e) {}
+        }
+
+        // Fetch latest merged users from server
+        const res = await fetch('/api/users');
+        if (res.ok) {
+          const data = await res.json();
+          if (data.success && Array.isArray(data.users) && data.users.length > 0) {
             setRegisteredUsers(prev => {
               const map = new Map<string, UserProfile>();
               prev.forEach(u => map.set(u.email.toLowerCase().trim(), u));
-              fromDb.forEach(u => map.set(u.email.toLowerCase().trim(), { ...u, role: isUserAdmin(u.email, u.role) ? 'admin' : u.role }));
+              data.users.forEach((u: UserProfile) => {
+                if (u && u.email) {
+                  map.set(u.email.toLowerCase().trim(), {
+                    ...u,
+                    role: isUserAdmin(u.email, u.role) ? 'admin' : (u.role || 'user'),
+                  });
+                }
+              });
               const merged = Array.from(map.values());
               try { localStorage.setItem(STORAGE_KEYS.USERS, JSON.stringify(merged)); } catch (e) {}
               return merged;
             });
-            addToast('success', 'An Sabunta Masu Amfani', `An jero bayanan mutane ${fromDb.length} daga sabar tsaro.`);
-            return;
           }
         }
+      } catch (err) {
+        // Offline resilient
       }
-      addToast('info', 'Users Synced', 'Jerin masu amfani yana sabuntacce (Live).');
+    };
+
+    syncUsersAcrossDevices();
+  }, []);
+
+  const refreshUsersList = async () => {
+    try {
+      let fetchedCount = 0;
+      // 1. Fetch from Centralized Server API
+      try {
+        const res = await fetch('/api/users');
+        if (res.ok) {
+          const data = await res.json();
+          if (data.success && Array.isArray(data.users) && data.users.length > 0) {
+            setRegisteredUsers(prev => {
+              const map = new Map<string, UserProfile>();
+              prev.forEach(u => map.set(u.email.toLowerCase().trim(), u));
+              data.users.forEach((u: UserProfile) => {
+                if (u && u.email) {
+                  map.set(u.email.toLowerCase().trim(), {
+                    ...u,
+                    role: isUserAdmin(u.email, u.role) ? 'admin' : (u.role || 'user'),
+                  });
+                }
+              });
+              const merged = Array.from(map.values());
+              try { localStorage.setItem(STORAGE_KEYS.USERS, JSON.stringify(merged)); } catch (e) {}
+              fetchedCount = merged.length;
+              return merged;
+            });
+          }
+        }
+      } catch (serverErr) {
+        console.warn('[Sync Server Users]', serverErr);
+      }
+
+      // 2. Fetch from Firebase Firestore
+      const { db } = getFirebaseInstance();
+      if (db) {
+        try {
+          const usersCol = collection(db, 'trendboost_users');
+          const snap = await getDocs(usersCol);
+          if (!snap.empty) {
+            const fromDb: UserProfile[] = [];
+            snap.forEach(docSnap => {
+              const data = docSnap.data() as UserProfile;
+              if (data && data.email) fromDb.push(data);
+            });
+            if (fromDb.length > 0) {
+              setRegisteredUsers(prev => {
+                const map = new Map<string, UserProfile>();
+                prev.forEach(u => map.set(u.email.toLowerCase().trim(), u));
+                fromDb.forEach(u => map.set(u.email.toLowerCase().trim(), { ...u, role: isUserAdmin(u.email, u.role) ? 'admin' : u.role }));
+                const merged = Array.from(map.values());
+                try { localStorage.setItem(STORAGE_KEYS.USERS, JSON.stringify(merged)); } catch (e) {}
+                fetchedCount = merged.length;
+                return merged;
+              });
+            }
+          }
+        } catch (dbErr) {
+          console.warn('[Sync Firestore Users]', dbErr);
+        }
+      }
+
+      addToast('success', 'An Sabunta Masu Amfani 🎉', `An jero bayanan mutane ${fetchedCount || registeredUsers.length} daga sabar sadarwa.`);
     } catch (err) {
       console.warn('[Sync Users]', err);
       addToast('info', 'Users List', 'Ana nuna jerin masu amfani a halin yanzu.');
