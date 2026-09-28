@@ -320,6 +320,12 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ user }),
       }).catch(() => {});
+
+      // Synchronize directly to Firebase Firestore so phone & laptop see identical live data
+      const { db } = getFirebaseInstance();
+      if (db && user.uid) {
+        setDoc(doc(db, 'trendboost_users', user.uid), user, { merge: true }).catch(() => {});
+      }
     }
   }, [user]);
 
@@ -370,6 +376,45 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     };
 
     syncUsersAcrossDevices();
+
+    // Cross-Device Campaigns & Orders Synchronization
+    const syncCampaignsAcrossDevices = async () => {
+      try {
+        const saved = localStorage.getItem(STORAGE_KEYS.CAMPAIGNS);
+        if (saved) {
+          try {
+            const parsed = JSON.parse(saved);
+            if (Array.isArray(parsed) && parsed.length > 0) {
+              await fetch('/api/campaigns/sync', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ campaigns: parsed }),
+              });
+            }
+          } catch (e) {}
+        }
+
+        const res = await fetch('/api/campaigns');
+        if (res.ok) {
+          const data = await res.json();
+          if (data.success && Array.isArray(data.campaigns) && data.campaigns.length > 0) {
+            setCampaigns((prev) => {
+              const map = new Map<string, BoostCampaign>();
+              prev.forEach((c) => map.set(c.orderRef || c.id, c));
+              data.campaigns.forEach((c: BoostCampaign) => {
+                const key = c.orderRef || c.id;
+                map.set(key, { ...map.get(key), ...c });
+              });
+              const merged = Array.from(map.values());
+              try { localStorage.setItem(STORAGE_KEYS.CAMPAIGNS, JSON.stringify(merged)); } catch (e) {}
+              return merged;
+            });
+          }
+        }
+      } catch (err) {}
+    };
+
+    syncCampaignsAcrossDevices();
   }, []);
 
   const refreshUsersList = async () => {
@@ -543,9 +588,72 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       // Silent offline mode fallback
     }
 
+    // Listen to live Registered Users from Firestore (cross-device real-time sync)
+    let unsubscribeUsers = () => {};
+    try {
+      const usersQuery = collection(db, 'trendboost_users');
+      unsubscribeUsers = onSnapshot(
+        usersQuery,
+        (snapshot) => {
+          if (!snapshot.empty) {
+            const liveUsers: UserProfile[] = [];
+            snapshot.forEach((docSnap) => {
+              const data = docSnap.data() as UserProfile;
+              if (data && data.email) {
+                liveUsers.push(data);
+              }
+            });
+            if (liveUsers.length > 0) {
+              setRegisteredUsers((prev) => {
+                const map = new Map<string, UserProfile>();
+                INITIAL_REGISTERED_USERS.forEach((u) => map.set(u.email.toLowerCase().trim(), u));
+                prev.forEach((u) => map.set(u.email.toLowerCase().trim(), u));
+                liveUsers.forEach((u) => {
+                  if (u && u.email) {
+                    map.set(u.email.toLowerCase().trim(), {
+                      ...u,
+                      role: isUserAdmin(u.email, u.role) ? 'admin' : (u.role || 'user'),
+                    });
+                  }
+                });
+                const merged = Array.from(map.values());
+                try { localStorage.setItem(STORAGE_KEYS.USERS, JSON.stringify(merged)); } catch (e) {}
+                return merged;
+              });
+            }
+          }
+        },
+        (_err) => {}
+      );
+    } catch (_err) {}
+
+    // Listen to live Completed Tasks from Firestore
+    let unsubscribeTasks = () => {};
+    try {
+      const tasksQuery = collection(db, 'boost_completed_tasks');
+      unsubscribeTasks = onSnapshot(
+        tasksQuery,
+        (snapshot) => {
+          if (!snapshot.empty) {
+            const liveTasks: CompletedTask[] = [];
+            snapshot.forEach((docSnap) => {
+              const t = docSnap.data() as CompletedTask;
+              if (t && t.id) liveTasks.push(t);
+            });
+            if (liveTasks.length > 0) {
+              setCompletedTasks(liveTasks);
+            }
+          }
+        },
+        (_err) => {}
+      );
+    } catch (_err) {}
+
     return () => {
       unsubscribeAuth();
       unsubscribeCampaigns();
+      unsubscribeUsers();
+      unsubscribeTasks();
     };
   }, []);
 
@@ -882,7 +990,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     setUser(updatedUser);
     setCampaigns(prev => [newCampaign, ...prev]);
 
-    // Dispatch order to Peakerr API in background
+    // Dispatch order to Peakerr API & Centralized Server in background
     fetch('/api/smm/order', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
@@ -891,6 +999,11 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         actionType: data.actionType,
         targetUrl: data.targetUrl,
         quantity: data.requiredCount,
+        customerEmail: currentUser.email,
+        customerName: currentUser.displayName,
+        orderRef,
+        amountPaidNgn: data.amountPaidNgn,
+        title: data.title,
       }),
     })
       .then(res => res.json())
@@ -914,6 +1027,13 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       .catch(err => {
         console.warn('[Peakerr API fetch notice]', err);
       });
+
+    // Sync to Server API so every device sees this order
+    fetch('/api/campaigns/sync', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ campaign: newCampaign }),
+    }).catch(() => {});
 
     // Sync to Firebase
     const { db } = getFirebaseInstance();

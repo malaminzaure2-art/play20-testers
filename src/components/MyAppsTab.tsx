@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { useApp } from '../context/AppContext';
 import { 
   PlusCircle, 
@@ -30,6 +30,9 @@ export const MyAppsTab: React.FC = () => {
     refreshLiveCampaignStatus,
   } = useApp();
 
+  const isAdmin = user?.email?.toLowerCase().includes('msngapps') || user?.email?.toLowerCase().includes('malaminzaure') || user?.role === 'admin';
+  const [viewScope, setViewScope] = useState<'all' | 'mine'>(isAdmin ? 'all' : 'mine');
+
   if (!user) {
     return (
       <div className="max-w-4xl mx-auto px-4 py-16 text-center space-y-4">
@@ -50,12 +53,17 @@ export const MyAppsTab: React.FC = () => {
     );
   }
 
-  const myCampaigns = campaigns.filter(c => 
-    c.ownerId === user.uid || 
-    c.ownerEmail === user.email || 
-    c.orderRef === 'TB-TI-500874' ||
-    c.targetUrl?.includes('sulaimanapps2')
-  );
+  // Real-time campaigns filtering: Admin sees all customer orders by default
+  const myCampaigns = campaigns.filter(c => {
+    if (isAdmin && viewScope === 'all') return true;
+    return (
+      c.ownerId === user.uid || 
+      c.ownerEmail === user.email || 
+      c.orderRef === 'TB-TI-500874' ||
+      c.targetUrl?.includes('sulaimanapps2')
+    );
+  });
+
   const totalDelivered = myCampaigns.reduce((acc, c) => acc + (c.deliveredCount || 0), 0);
   const totalRequested = myCampaigns.reduce((acc, c) => acc + (c.requiredCount || 0), 0);
 
@@ -65,17 +73,52 @@ export const MyAppsTab: React.FC = () => {
       {/* Header & Stats Banner */}
       <div className="bg-white rounded-3xl p-6 border border-slate-200 shadow-xs flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
         <div>
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-2 flex-wrap">
             <h1 className="text-xl sm:text-2xl font-black text-slate-900 tracking-tight">
-              My Boost Campaigns
+              {isAdmin && viewScope === 'all' ? 'Dukkan Ododin Kasuwa (All Customer Orders)' : 'My Boost Campaigns'}
             </h1>
             <span className="text-xs font-bold px-2.5 py-0.5 rounded-full bg-indigo-100 text-indigo-700">
-              {myCampaigns.length} Active
+              {myCampaigns.length} Orders
             </span>
+            {isAdmin && (
+              <span className="text-[10px] font-black px-2 py-0.5 rounded-md bg-amber-100 text-amber-900 border border-amber-300">
+                👑 Admin View
+              </span>
+            )}
           </div>
           <p className="text-xs sm:text-sm text-slate-500 mt-1">
             Track real-time followers, subscribers, likes, and views delivered to your social media accounts.
           </p>
+
+          {/* Admin Switcher Pills */}
+          {isAdmin && (
+            <div className="pt-3 flex items-center gap-2">
+              <button
+                onClick={() => setViewScope('all')}
+                className={`px-3 py-1.5 rounded-xl text-xs font-bold transition cursor-pointer flex items-center gap-1.5 ${
+                  viewScope === 'all'
+                    ? 'bg-indigo-600 text-white shadow-xs'
+                    : 'bg-slate-100 text-slate-600 hover:text-slate-900'
+                }`}
+              >
+                <span>📦 Dukkan Ododin Abokan Ciniki</span>
+                <span className={`text-[10px] px-1.5 py-0.2 rounded-full font-black ${viewScope === 'all' ? 'bg-indigo-800 text-white' : 'bg-slate-200 text-slate-700'}`}>
+                  {campaigns.length}
+                </span>
+              </button>
+
+              <button
+                onClick={() => setViewScope('mine')}
+                className={`px-3 py-1.5 rounded-xl text-xs font-bold transition cursor-pointer flex items-center gap-1.5 ${
+                  viewScope === 'mine'
+                    ? 'bg-indigo-600 text-white shadow-xs'
+                    : 'bg-slate-100 text-slate-600 hover:text-slate-900'
+                }`}
+              >
+                <span>👤 Ododina Kaɗai</span>
+              </button>
+            </div>
+          )}
         </div>
 
         <div className="flex items-center flex-wrap gap-2.5">
@@ -173,6 +216,11 @@ export const MyAppsTab: React.FC = () => {
                           ₦{camp.amountPaidNgn.toLocaleString()} Paid
                         </span>
                       ) : null}
+                      {camp.ownerEmail && camp.ownerEmail !== user.email && (
+                        <span className="text-[11px] font-bold px-2 py-0.5 rounded-md bg-amber-50 text-amber-900 border border-amber-200 flex items-center gap-1">
+                          👤 Mai Oda: {camp.ownerName || camp.ownerEmail}
+                        </span>
+                      )}
                       {isCompleted ? (
                         <span className="text-[11px] font-bold px-2 py-0.5 rounded-md bg-emerald-100 text-emerald-800">
                           Completed ✅

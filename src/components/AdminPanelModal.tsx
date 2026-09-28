@@ -23,7 +23,9 @@ import {
   Lock,
   Award,
   Sparkles,
-  UserCheck
+  UserCheck,
+  Package,
+  Plus
 } from 'lucide-react';
 import { useApp } from '../context/AppContext';
 import { SocialPlatform, BoostActionType, UserProfile } from '../types';
@@ -43,8 +45,8 @@ export const AdminPanelModal: React.FC = () => {
     addToast
   } = useApp();
 
-  // Tab State: 'dispatcher' | 'users'
-  const [activeAdminTab, setActiveAdminTab] = useState<'dispatcher' | 'users'>('dispatcher');
+  // Tab State: 'dispatcher' | 'orders' | 'users'
+  const [activeAdminTab, setActiveAdminTab] = useState<'dispatcher' | 'orders' | 'users'>('dispatcher');
 
   // Peakerr Balance State
   const [balance, setBalance] = useState<string | null>(null);
@@ -59,6 +61,10 @@ export const AdminPanelModal: React.FC = () => {
   const [amountChargedNgn, setAmountChargedNgn] = useState<number | ''>(1500);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [lastDispatchedOrder, setLastDispatchedOrder] = useState<{ id: string | number; name: string } | null>(null);
+
+  // Orders Tab States
+  const [orderSearchTerm, setOrderSearchTerm] = useState('');
+  const [orderStatusFilter, setOrderStatusFilter] = useState<'all' | 'running' | 'completed'>('all');
 
   // TikTok Live Checker Tool
   const [checkUsername, setCheckUsername] = useState('');
@@ -251,6 +257,24 @@ export const AdminPanelModal: React.FC = () => {
             >
               <Zap className="w-4 h-4 fill-current" />
               <span>⚡ Tura Odoji (Dispatcher)</span>
+            </button>
+
+            <button
+              id="admin-tab-orders"
+              onClick={() => setActiveAdminTab('orders')}
+              className={`px-4 py-2 rounded-xl text-xs font-bold transition flex items-center gap-2 cursor-pointer ${
+                activeAdminTab === 'orders'
+                  ? 'bg-gradient-to-r from-amber-400 via-amber-500 to-amber-600 text-slate-950 shadow-md font-extrabold'
+                  : 'bg-white/10 hover:bg-white/15 text-indigo-100 hover:text-white'
+              }`}
+            >
+              <Package className="w-4 h-4" />
+              <span>📦 Ododin Kasuwa (Orders)</span>
+              <span className={`text-[10px] px-2 py-0.5 rounded-full font-mono font-black ${
+                activeAdminTab === 'orders' ? 'bg-slate-950 text-amber-300' : 'bg-white/20 text-white'
+              }`}>
+                {campaigns.length}
+              </span>
             </button>
 
             <button
@@ -735,7 +759,240 @@ export const AdminPanelModal: React.FC = () => {
             </>
           )}
 
-          {/* TAB 2: USERS (MASU AMFANI) */}
+          {/* TAB 2: ORDERS (ODODIN MASU SAYE DA PAYSTACK) */}
+          {activeAdminTab === 'orders' && (
+            <div className="space-y-6">
+              
+              {/* Orders Overview Stats */}
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                <div className="bg-gradient-to-br from-indigo-900 to-slate-900 text-white rounded-2xl p-4 sm:p-5 shadow-md">
+                  <div className="flex items-center justify-between">
+                    <span className="text-xs font-bold text-indigo-200 uppercase tracking-wider">Jimillar Ododi</span>
+                    <Package className="w-5 h-5 text-amber-400" />
+                  </div>
+                  <div className="mt-3 flex items-baseline gap-2">
+                    <span className="text-3xl sm:text-4xl font-black text-white font-mono">
+                      {campaigns.length}
+                    </span>
+                    <span className="text-xs text-indigo-300 font-medium">Orders a shafi</span>
+                  </div>
+                </div>
+
+                <div className="bg-white border border-slate-200/80 rounded-2xl p-4 sm:p-5 shadow-xs">
+                  <div className="flex items-center justify-between">
+                    <span className="text-xs font-bold text-slate-500 uppercase tracking-wider">Kuɗin Paystack</span>
+                    <DollarSign className="w-5 h-5 text-emerald-600" />
+                  </div>
+                  <div className="mt-3 flex items-baseline gap-2">
+                    <span className="text-2xl sm:text-3xl font-black text-emerald-600 font-mono">
+                      ₦{campaigns.reduce((sum, c) => sum + (c.amountPaidNgn || 0), 0).toLocaleString()}
+                    </span>
+                  </div>
+                </div>
+
+                <div className="bg-white border border-slate-200/80 rounded-2xl p-4 sm:p-5 shadow-xs">
+                  <div className="flex items-center justify-between">
+                    <span className="text-xs font-bold text-slate-500 uppercase tracking-wider">Followers & Likes Da Aka Tura</span>
+                    <TrendingUp className="w-5 h-5 text-purple-600" />
+                  </div>
+                  <div className="mt-3 flex items-baseline gap-2">
+                    <span className="text-2xl sm:text-3xl font-black text-slate-900 font-mono">
+                      {campaigns.reduce((sum, c) => sum + (c.deliveredCount || 0), 0).toLocaleString()}
+                    </span>
+                    <span className="text-xs text-slate-400 font-mono">
+                      / {campaigns.reduce((sum, c) => sum + (c.requiredCount || 0), 0).toLocaleString()}
+                    </span>
+                  </div>
+                </div>
+              </div>
+
+              {/* Search, Filter, & Live Refresh Controls */}
+              <div className="bg-white border border-slate-200 rounded-3xl p-4 sm:p-5 space-y-3 shadow-xs">
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                  
+                  {/* Search Bar */}
+                  <div className="relative flex-1">
+                    <Search className="w-4 h-4 text-slate-400 absolute left-3.5 top-3" />
+                    <input
+                      type="text"
+                      placeholder="Bincika oda da Link, Suna, Email, ko Ref (misali: tiktok.com, TB-TI-500874)..."
+                      value={orderSearchTerm}
+                      onChange={(e) => setOrderSearchTerm(e.target.value)}
+                      className="w-full bg-slate-50 border border-slate-200 rounded-2xl pl-10 pr-4 py-2.5 text-xs text-slate-900 focus:bg-white focus:border-indigo-600 outline-none transition font-medium"
+                    />
+                  </div>
+
+                  {/* Filter Pills */}
+                  <div className="flex items-center gap-1.5 shrink-0 flex-wrap">
+                    <button
+                      onClick={() => setOrderStatusFilter('all')}
+                      className={`px-3 py-1.5 rounded-xl text-xs font-bold transition cursor-pointer ${
+                        orderStatusFilter === 'all'
+                          ? 'bg-indigo-600 text-white shadow-xs'
+                          : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
+                      }`}
+                    >
+                      Duka ({campaigns.length})
+                    </button>
+                    <button
+                      onClick={() => setOrderStatusFilter('running')}
+                      className={`px-3 py-1.5 rounded-xl text-xs font-bold transition cursor-pointer ${
+                        orderStatusFilter === 'running'
+                          ? 'bg-amber-500 text-white shadow-xs'
+                          : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
+                      }`}
+                    >
+                      Masu Aiki ({campaigns.filter(c => c.status !== 'completed' && c.deliveredCount < c.requiredCount).length})
+                    </button>
+                    <button
+                      onClick={() => setOrderStatusFilter('completed')}
+                      className={`px-3 py-1.5 rounded-xl text-xs font-bold transition cursor-pointer ${
+                        orderStatusFilter === 'completed'
+                          ? 'bg-emerald-600 text-white shadow-xs'
+                          : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
+                      }`}
+                    >
+                      Kammalallu ({campaigns.filter(c => c.status === 'completed' || c.deliveredCount >= c.requiredCount).length})
+                    </button>
+
+                    <button
+                      onClick={() => refreshLiveCampaignStatus(true)}
+                      disabled={isSyncingOrders}
+                      className="bg-indigo-50 hover:bg-indigo-100 text-indigo-700 text-xs font-bold px-3 py-2 rounded-xl transition flex items-center gap-1.5 cursor-pointer disabled:opacity-50"
+                      title="Sabunta Dukkan Ododi Daga Sabar & Peakerr"
+                    >
+                      <RefreshCw className={`w-3.5 h-3.5 ${isSyncingOrders ? 'animate-spin' : ''}`} />
+                      <span className="hidden sm:inline">Sabunta Live</span>
+                    </button>
+                  </div>
+                </div>
+
+                {/* Orders List Cards */}
+                <div className="space-y-3 pt-2">
+                  {campaigns
+                    .filter((c) => {
+                      const term = orderSearchTerm.toLowerCase().trim();
+                      const matches = !term ||
+                        c.title?.toLowerCase().includes(term) ||
+                        c.targetUrl?.toLowerCase().includes(term) ||
+                        c.orderRef?.toLowerCase().includes(term) ||
+                        c.ownerEmail?.toLowerCase().includes(term) ||
+                        c.ownerName?.toLowerCase().includes(term) ||
+                        c.platform?.toLowerCase().includes(term);
+
+                      const isDone = c.status === 'completed' || c.deliveredCount >= c.requiredCount;
+                      if (orderStatusFilter === 'running') return matches && !isDone;
+                      if (orderStatusFilter === 'completed') return matches && isDone;
+                      return matches;
+                    })
+                    .map((camp, idx) => {
+                      const progress = Math.min(100, Math.round(((camp.deliveredCount || 0) / (camp.requiredCount || 1)) * 100));
+                      const isDone = camp.status === 'completed' || camp.deliveredCount >= camp.requiredCount;
+
+                      return (
+                        <div
+                          key={camp.id || camp.orderRef || idx}
+                          className="bg-slate-50/70 hover:bg-white border border-slate-200 rounded-2xl p-4 transition-all space-y-3 shadow-2xs"
+                        >
+                          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2.5">
+                            
+                            {/* Badges & Title */}
+                            <div className="space-y-1 min-w-0 flex-1">
+                              <div className="flex items-center gap-2 flex-wrap">
+                                <span className="text-[11px] font-bold px-2 py-0.5 rounded-md bg-slate-900 text-white uppercase">
+                                  {camp.platform}
+                                </span>
+                                <span className="text-[11px] font-bold px-2 py-0.5 rounded-md bg-indigo-50 text-indigo-700 uppercase">
+                                  {camp.actionType}
+                                </span>
+                                {camp.orderRef && (
+                                  <span className="text-[11px] font-mono font-bold px-2 py-0.5 rounded-md bg-slate-100 text-slate-700">
+                                    {camp.orderRef}
+                                  </span>
+                                )}
+                                {camp.peakerrOrderId && (
+                                  <span className="text-[11px] font-mono font-bold px-2 py-0.5 rounded-md bg-purple-100 text-purple-800 border border-purple-200">
+                                    ⚡ Peakerr #{camp.peakerrOrderId}
+                                  </span>
+                                )}
+                                {camp.amountPaidNgn ? (
+                                  <span className="text-[11px] font-black px-2 py-0.5 rounded-md bg-emerald-50 text-emerald-700 border border-emerald-200">
+                                    ₦{camp.amountPaidNgn.toLocaleString()} Paid (Paystack)
+                                  </span>
+                                ) : null}
+                                {isDone ? (
+                                  <span className="text-[11px] font-bold px-2 py-0.5 rounded-md bg-emerald-100 text-emerald-800">
+                                    Kammalallu ✅
+                                  </span>
+                                ) : (
+                                  <span className="text-[11px] font-bold px-2 py-0.5 rounded-md bg-amber-100 text-amber-900 flex items-center gap-1">
+                                    <span className="w-1.5 h-1.5 rounded-full bg-amber-500 animate-pulse" />
+                                    Yana Aiki (In Progress) ⚡
+                                  </span>
+                                )}
+                              </div>
+
+                              <h4 className="font-extrabold text-sm text-slate-900 truncate">
+                                {camp.title}
+                              </h4>
+
+                              <div className="flex items-center gap-3 text-xs text-slate-500 flex-wrap">
+                                {camp.ownerName && (
+                                  <span className="font-semibold text-slate-700 flex items-center gap-1">
+                                    <User className="w-3.5 h-3.5 text-indigo-600" />
+                                    <span>Mai Oda: {camp.ownerName} ({camp.ownerEmail || 'Paystack'})</span>
+                                  </span>
+                                )}
+                                <a
+                                  href={camp.targetUrl}
+                                  target="_blank"
+                                  rel="noopener noreferrer"
+                                  className="text-indigo-600 hover:underline flex items-center gap-1 font-mono"
+                                >
+                                  <span>{camp.targetUrl}</span>
+                                  <ExternalLink className="w-3 h-3" />
+                                </a>
+                              </div>
+                            </div>
+
+                            {/* Actions */}
+                            <div className="flex items-center gap-2 shrink-0">
+                              <button
+                                onClick={() => refreshLiveCampaignStatus(true)}
+                                disabled={isSyncingOrders}
+                                className="px-3 py-1.5 rounded-xl bg-slate-900 hover:bg-slate-800 text-white text-xs font-bold transition flex items-center gap-1 cursor-pointer disabled:opacity-50"
+                                title="Sabunta ci gaban wannan odar"
+                              >
+                                <RefreshCw className={`w-3 h-3 ${isSyncingOrders ? 'animate-spin' : ''}`} />
+                                <span>Duba Ci Gaba</span>
+                              </button>
+                            </div>
+                          </div>
+
+                          {/* Progress bar */}
+                          <div className="space-y-1 pt-1.5 border-t border-slate-200/60">
+                            <div className="flex items-center justify-between text-xs font-medium text-slate-600">
+                              <span>
+                                An Tura: <strong className="text-emerald-700 font-bold">{camp.deliveredCount || 0}</strong> / {camp.requiredCount} ({camp.actionType})
+                              </span>
+                              <span className="font-bold text-indigo-700 font-mono">{progress}%</span>
+                            </div>
+                            <div className="w-full h-2 bg-slate-200/80 rounded-full overflow-hidden">
+                              <div
+                                className="h-full bg-gradient-to-r from-indigo-500 via-purple-500 to-emerald-500 rounded-full transition-all duration-500"
+                                style={{ width: `${progress}%` }}
+                              />
+                            </div>
+                          </div>
+                        </div>
+                      );
+                    })}
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* TAB 3: USERS (MASU AMFANI) */}
           {activeAdminTab === 'users' && (
             <div className="space-y-6">
               

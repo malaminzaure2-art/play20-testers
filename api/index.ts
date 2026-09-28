@@ -43,6 +43,68 @@ const DEFAULT_SERVICE_MAPPING: Record<string, Record<string, number>> = {
   },
 };
 
+// Server-Side Centralized Campaigns & Orders Registry
+let serverCampaigns: any[] = [
+  {
+    id: 'camp-tiktok-sulaimanapps2',
+    ownerId: 'sulaimanapps2',
+    ownerName: 'Sulaiman Apps',
+    ownerEmail: 'malaminzaure2@gmail.com',
+    platform: 'tiktok',
+    actionType: 'follow',
+    title: 'TikTok Boost: 100 Followers for @sulaimanapps2',
+    targetUrl: 'https://www.tiktok.com/@sulaimanapps2',
+    category: 'Entertainment',
+    description: 'Direct boost order for 100 Followers on TikTok',
+    rewardPerAction: 10,
+    requiredCount: 100,
+    deliveredCount: 100,
+    minDurationSeconds: 10,
+    paymentMethod: 'cash_card',
+    amountPaidNgn: 350,
+    orderRef: 'TB-TI-500874',
+    peakerrOrderId: 80959061,
+    providerStatus: 'Completed',
+    active: false,
+    createdAt: '2026-09-26T15:00:00Z',
+    status: 'completed',
+  },
+];
+
+// GET: Fetch all boost campaigns & Paystack customer orders
+app.get('/api/campaigns', (_req, res) => {
+  res.json({ success: true, count: serverCampaigns.length, campaigns: serverCampaigns });
+});
+
+// POST: Synchronize campaign / customer order from client or Paystack callback
+app.post('/api/campaigns/sync', (req, res) => {
+  try {
+    const { campaign, campaigns } = req.body;
+    const incoming: any[] = campaigns && Array.isArray(campaigns) ? campaigns : campaign ? [campaign] : [];
+
+    incoming.forEach((newCamp) => {
+      if (!newCamp) return;
+      const ref = newCamp.orderRef || newCamp.id;
+      const existingIdx = serverCampaigns.findIndex((c) => (c.orderRef && c.orderRef === ref) || (c.id && c.id === newCamp.id));
+
+      if (existingIdx >= 0) {
+        serverCampaigns[existingIdx] = { ...serverCampaigns[existingIdx], ...newCamp };
+      } else {
+        serverCampaigns.unshift({
+          ...newCamp,
+          createdAt: newCamp.createdAt || new Date().toISOString(),
+          status: newCamp.status || 'running',
+          active: newCamp.active !== undefined ? newCamp.active : true,
+        });
+      }
+    });
+
+    res.json({ success: true, count: serverCampaigns.length, campaigns: serverCampaigns });
+  } catch (err: any) {
+    res.status(500).json({ success: false, error: err.message });
+  }
+});
+
 // 1. API: Check Peakerr Balance
 app.get('/api/smm/balance', async (_req, res) => {
   try {
@@ -93,10 +155,42 @@ app.post('/api/smm/order', async (req, res) => {
     });
 
     const data = await response.json();
+
+    // Automatically record this order into the Server Campaigns Registry
+    const resolvedOrderRef = req.body.orderRef || `TB-${(platform || 'BO').substring(0, 2).toUpperCase()}-${Date.now().toString().slice(-6)}`;
+    const newCampaignItem = {
+      id: `camp-${platform || 'social'}-${Date.now()}`,
+      ownerId: req.body.customerEmail || 'paystack-customer',
+      ownerName: req.body.customerName || 'Abokin Ciniki (Customer)',
+      ownerEmail: req.body.customerEmail || 'customer@trendboost.app',
+      platform: platform || 'tiktok',
+      actionType: actionType || 'follow',
+      title: req.body.title || `${(platform || 'Social').toUpperCase()} Boost: ${quantity} ${actionType || 'actions'}`,
+      targetUrl: targetUrl.trim(),
+      category: 'General',
+      description: `Paystack Boost Order for ${quantity} on ${platform}`,
+      rewardPerAction: 10,
+      requiredCount: Number(quantity),
+      deliveredCount: 0,
+      minDurationSeconds: 10,
+      paymentMethod: 'cash_card',
+      amountPaidNgn: req.body.amountPaidNgn || (Number(quantity) * 3.5),
+      orderRef: resolvedOrderRef,
+      peakerrOrderId: data.order || null,
+      providerStatus: data.order ? 'In Progress' : 'Pending',
+      active: true,
+      createdAt: new Date().toISOString(),
+      status: 'running',
+    };
+
+    serverCampaigns.unshift(newCampaignItem);
+
     res.json({
       success: !data.error,
       peakerrOrder: data.order || null,
       error: data.error || null,
+      orderRef: resolvedOrderRef,
+      campaign: newCampaignItem,
       raw: data,
     });
   } catch (error: any) {

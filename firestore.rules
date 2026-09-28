@@ -11,16 +11,21 @@ service cloud.firestore {
       allow read, write: if true;
     }
     
-    // Closed testing apps and campaigns
-    match /apps/{appId} {
-      allow read, write: if true;
-    }
-    
+    // Boost campaigns
     match /boost_campaigns/{campaignId} {
       allow read, write: if true;
     }
     
-    // Testing tasks and daily proof submissions
+    // Completed tasks
+    match /boost_completed_tasks/{taskId} {
+      allow read, write: if true;
+    }
+    
+    // Closed testing apps and tasks
+    match /apps/{appId} {
+      allow read, write: if true;
+    }
+    
     match /tasks/{taskId} {
       allow read, write: if true;
     }

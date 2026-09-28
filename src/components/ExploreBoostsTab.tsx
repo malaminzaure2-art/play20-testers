@@ -108,7 +108,7 @@ export const ExploreBoostsTab: React.FC = () => {
 
           {/* Subtitle */}
           <p className="text-slate-300 text-xs sm:text-sm leading-relaxed max-w-2xl">
-            Promote your <strong>TikTok, YouTube, Instagram, Facebook, and Twitter</strong> accounts with real engagement. Automated fast delivery with secure Paystack checkout.
+            Promote your <strong>TikTok, YouTube, Instagram, Facebook, and Twitter</strong> accounts with engagement. Automated fast delivery with secure Paystack checkout.
           </p>
 
           {/* CTA Action Button */}
